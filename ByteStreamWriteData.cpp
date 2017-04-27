@@ -4,7 +4,9 @@
 CByteStreamWriteData::CByteStreamWriteData(BYTE* pData, DWORD dwData, IMFAsyncCallback* pCallback, IUnknown* pState) :
     m_cRef(0)
 {
-    m_pData = pData;
+    m_pData = new (std::nothrow) BYTE[dwData];
+    memcpy(m_pData, pData, dwData);
+    //m_pData = pData;
     m_dataLength = dwData;
     m_pCallback = pCallback;
     m_pStateObj = pState;
@@ -13,6 +15,7 @@ CByteStreamWriteData::CByteStreamWriteData(BYTE* pData, DWORD dwData, IMFAsyncCa
 
 CByteStreamWriteData::~CByteStreamWriteData(void)
 {
+    delete m_pData;
 }
 
 
