@@ -31,8 +31,15 @@ BEGIN
     POPUP "&File"
     BEGIN
         MENUITEM "&Open File for Render",       ID_FILE_OPENFILE
-        MENUITEM "Open File for Network and Render", ID_FILE_OPENFILEFORNETWORKANDRENDER
         MENUITEM "O&pen File for Network Streaming", ID_FILE_OPENFILEFORNETWORKSTREAMING
+        MENUITEM "Open File for Network and Render", ID_FILE_OPENFILEFORNETWORKANDRENDER
+        MENUITEM SEPARATOR
+        MENUITEM "Open Camera for render",      ID_FILE_OPENCAMERAFORRENDER
+        MENUITEM "Open Camera for network streaming", ID_FILE_OPENCAMERAFORNETWORKANDSTREAMING
+        MENUITEM "Open Camera for Encoding and Rendering", ID_FILE_OPENCAMERAFORENCODINGANDRENDERING
+        MENUITEM "Open Camera for Network and Render", ID_FILE_OPENCAMERAFORNETWORKANDRENDER
+        MENUITEM SEPARATOR
+        MENUITEM "Connect to remote camera",    ID_FILE_CONNECTTOREMOTECAMERA
         MENUITEM SEPARATOR
         MENUITEM "E&xit",                       ID_FILE_EXIT
     END
@@ -79,6 +86,7 @@ END
 //
 
 IDC_POINTER             CURSOR                  "arrow.cur"
+
 #endif    // English (United States) resources
 /////////////////////////////////////////////////////////////////////////////
 
