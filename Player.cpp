@@ -204,24 +204,17 @@ ULONG CPlayer::Release(void)
 
 
 //
-// OpenURL is the main initialization function that triggers bulding of the core
+// OpenFileURL is the main initialization function that triggers bulding of the core
 // MF components.
 //
 HRESULT CPlayer::OpenURL(PCWSTR sURL, HWND renderHwnd, bool network)
 {
     CComPtr<IMFTopology> pTopology = NULL;
     HRESULT hr = S_OK;
-    bool isMp3 = false;
     DWORD extensionStart = 0;
 
     do
     {
-        extensionStart = (DWORD)(wcslen(sURL) - 4);
-        if((DWORD)_wcsicmp(sURL + extensionStart, L".mp3") == 0)
-        {
-            isMp3 = true;
-        }
-
         // Step 1: create a media session if one doesn't exist already
         if(m_pSession == NULL)
         {
@@ -232,19 +225,20 @@ HRESULT CPlayer::OpenURL(PCWSTR sURL, HWND renderHwnd, bool network)
         m_hwndVideo = renderHwnd;
 
         // Step 2: build the topology.  Here we are using the TopoBuilder helper class.
-        if(renderHwnd != NULL && network)
+        if (renderHwnd != NULL && network)
         {
             hr = m_topoBuilder.RenderURL(sURL, m_hwndVideo, true);
         }
-        else if(renderHwnd != NULL && !network)
+        else if (renderHwnd != NULL && !network)
         {
             hr = m_topoBuilder.RenderURL(sURL, m_hwndVideo, false);
         }
-        else if(renderHwnd == NULL && network)
+        else if (renderHwnd == NULL && network)
         {
             hr = m_topoBuilder.RenderURL(sURL, NULL, true);
         }
         BREAK_ON_FAIL(hr);
+
 
         // get the topology from the TopoBuilder
         pTopology = m_topoBuilder.GetTopology();
@@ -275,6 +269,67 @@ HRESULT CPlayer::OpenURL(PCWSTR sURL, HWND renderHwnd, bool network)
     return hr;
 }
 
+
+HRESULT CPlayer::OpenLocalCamera(HWND renderHwnd, bool network)
+{
+    CComPtr<IMFTopology> pTopology = NULL;
+    HRESULT hr = S_OK;
+    DWORD extensionStart = 0;
+
+    do
+    {
+        // Step 1: create a media session if one doesn't exist already
+        if (m_pSession == NULL)
+        {
+            hr = CreateSession();
+            BREAK_ON_FAIL(hr);
+        }
+
+        m_hwndVideo = renderHwnd;
+
+        // Step 2: build the topology.  Here we are using the TopoBuilder helper class.
+        if (renderHwnd != NULL && network)
+        {
+            hr = m_topoBuilder.RenderCamera(m_hwndVideo, true);
+        }
+        else if (renderHwnd != NULL && !network)
+        {
+            hr = m_topoBuilder.RenderCamera(m_hwndVideo, false);
+        }
+        else if (renderHwnd == NULL && network)
+        {
+            hr = m_topoBuilder.RenderCamera(NULL, true);
+        }
+        BREAK_ON_FAIL(hr);
+
+
+        // get the topology from the TopoBuilder
+        pTopology = m_topoBuilder.GetTopology();
+        BREAK_ON_NULL(pTopology, E_UNEXPECTED);
+
+        // Step 3: add the topology to the internal queue of topologies associated with this
+        // media session
+        if (pTopology != NULL)
+        {
+            hr = m_pSession->SetTopology(0, pTopology);
+            BREAK_ON_FAIL(hr);
+        }
+
+        // If we've just initialized a brand new topology in step 1, set the player state 
+        // to "open pending" - not playing yet, but ready to begin.
+        if (m_state == PlayerState_Ready)
+        {
+            m_state = PlayerState_OpenPending;
+        }
+    } while (false);
+
+    if (FAILED(hr))
+    {
+        m_state = PlayerState_Closed;
+    }
+
+    return hr;
+}
 
 //
 //  Starts playback from paused or stopped state.
@@ -460,12 +515,12 @@ HRESULT CPlayer::OnTopologyReady(void)
     m_pPresentationClock = NULL;
     m_pSession->GetClock(&m_pPresentationClock);
 
-    DetermineDuration();
-    DrawSeekbar();
+    //DetermineDuration();
+    //DrawSeekbar();
 
     // get the rate control service that can be used to change the playback rate of the service
-    m_pRateControl = NULL;
-    MFGetService(m_pSession, MF_RATE_CONTROL_SERVICE, IID_IMFRateControl, (void**)&m_pRateControl);
+    //m_pRateControl = NULL;
+    //MFGetService(m_pSession, MF_RATE_CONTROL_SERVICE, IID_IMFRateControl, (void**)&m_pRateControl);
 
     return hr;
 }

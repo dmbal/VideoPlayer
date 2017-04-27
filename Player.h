@@ -37,6 +37,7 @@ class CPlayer : public IMFAsyncCallback
 
         // Playback control
         HRESULT OpenURL(PCWSTR sURL, HWND renderHwnd, bool network);
+        HRESULT OpenLocalCamera(HWND renderHwnd, bool network);
         HRESULT Play(void);
         HRESULT Pause(void);
         HRESULT Stop(void);

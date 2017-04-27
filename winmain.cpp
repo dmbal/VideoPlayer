@@ -24,6 +24,8 @@ LRESULT             OnCreateWindow(HWND hwnd);
 void                OnPaint(HWND hwnd);
 void                OnKeyPress(WPARAM key);
 void                OnOpenFile(HWND parent, bool render, bool network);
+void                OnOpenCamera(HWND parent, bool render, bool network);
+void                OnOpenRemoteCamera(HWND parent);
 void OnTimer(void);
 
 
@@ -114,6 +116,22 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
         else if(LOWORD(wParam) == ID_FILE_OPENFILEFORNETWORKANDRENDER)
         {
             OnOpenFile(hwnd, true, true);
+        }
+        else if (LOWORD(wParam) == ID_FILE_OPENCAMERAFORRENDER)
+        {
+            OnOpenCamera(hwnd, true, false);
+        }
+        else if (LOWORD(wParam) == ID_FILE_OPENCAMERAFORNETWORKANDSTREAMING)
+        {
+            OnOpenCamera(hwnd, false, true);
+        }
+        else if (LOWORD(wParam) == ID_FILE_OPENCAMERAFORNETWORKANDRENDER)
+        {
+            OnOpenCamera(hwnd, true, true);
+        }
+        else if (LOWORD(wParam) == ID_FILE_CONNECTTOREMOTECAMERA)
+        {
+            OnOpenRemoteCamera(hwnd);
         }
         else if(LOWORD(wParam) == ID_CONTROL_PLAY)
         {
@@ -304,5 +322,30 @@ void OnOpenFile(HWND parent, bool render, bool network)
                 g_pPlayer->OpenURL(ofn.lpstrFile, NULL, network);
             }
         }
+    }
+}
+
+void OnOpenCamera(HWND parent, bool render, bool network)
+{
+    // call the player to actually open the camera and build the topology
+    if (g_pPlayer != NULL)
+    {
+        if (render)
+        {
+            g_pPlayer->OpenLocalCamera(parent, network);
+        }
+        else
+        {
+            g_pPlayer->OpenLocalCamera(NULL, network);
+        }
+    }
+}
+
+void OnOpenRemoteCamera(HWND parent)
+{
+    // call the player to actually open the camera and build the topology
+    if (g_pPlayer != NULL)
+    {
+        g_pPlayer->OpenURL(L"http://localhost:8080", parent, false);
     }
 }

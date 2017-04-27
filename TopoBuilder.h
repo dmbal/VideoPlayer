@@ -22,6 +22,7 @@ class CTopoBuilder
         ~CTopoBuilder(void) { ShutdownSource(); };
 
         HRESULT RenderURL(PCWSTR fileUrl, HWND videoHwnd, bool addNetwork);
+        HRESULT RenderCamera(HWND videoHwnd, bool addNetwork);
 
         IMFTopology* GetTopology(void) { return m_pTopology; }
 
@@ -40,9 +41,11 @@ class CTopoBuilder
         bool m_addNetworkSink;
 
         HRESULT CreateMediaSource(PCWSTR sURL);
+        HRESULT CreateMediaSource();
         HRESULT CreateNetworkSink(DWORD requestPort);
         HRESULT CreateTopology(void);
 
+        HRESULT CreateASFProfile(IMFASFProfile** ppAsfProfile);
         HRESULT AddBranchToPartialTopology(
             CComPtr<IMFPresentationDescriptor> pPresDescriptor, 
             DWORD iStream);

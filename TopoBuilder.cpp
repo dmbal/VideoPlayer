@@ -42,6 +42,91 @@ HRESULT CTopoBuilder::RenderURL(PCWSTR fileUrl, HWND videoHwnd, bool addNetwork)
     return hr;
 }
 
+HRESULT CTopoBuilder::RenderCamera(HWND videoHwnd, bool addNetwork)
+{
+    HRESULT hr = S_OK;
+
+    do
+    {
+        m_videoHwnd = videoHwnd;
+
+        // The topology can have either a rendering sink (when videoHwnd is not NULL), a 
+        // network sink, or both.
+        if (videoHwnd == NULL && !addNetwork)
+        {
+            hr = E_INVALIDARG;
+            break;
+        }
+
+        // first create the media source for the file/stream passed in.  Fail and fall out if
+        // the media source creation fails (e.g. if the file format is not recognized)
+        hr = CreateMediaSource();
+        BREAK_ON_FAIL(hr);
+
+        // add a network sink if one was requested
+        if (addNetwork)
+        {
+            hr = CreateNetworkSink(8080);
+            BREAK_ON_FAIL(hr);
+        }
+
+        // create the actual topology
+        hr = CreateTopology();
+    } while (false);
+
+    return hr;
+}
+
+HRESULT CTopoBuilder::CreateASFProfile(IMFASFProfile** ppAsfProfile)
+{
+    /////////////////////////// 
+    //[ORIGINAL IMPLEMENTATION]
+    /////////////////////////// 
+    // create the ASF profile from the presentation descriptor
+    //hr = MFCreateASFProfileFromPresentationDescriptor(pPresDescriptor, &pAsfProfile);
+    //BREAK_ON_FAIL(hr);
+
+    HRESULT hr = S_OK;
+    CComPtr<IMFMediaTypeHandler> pHandler = NULL;
+    CComPtr<IMFStreamDescriptor> pStreamDescriptor;
+    CComPtr<IMFMediaType> pMediaType;
+    CComPtr<IMFASFProfile> pNewASFProfile;
+    CComPtr<IMFASFStreamConfig> pASFStreamConfig;
+    CComPtr<IMFPresentationDescriptor> pPresDescriptor;
+    BOOL selected;
+    do
+    {
+        // create the presentation descriptor for the source
+        hr = m_pSource->CreatePresentationDescriptor(&pPresDescriptor);
+        BREAK_ON_FAIL(hr);
+        hr = pPresDescriptor->GetStreamDescriptorByIndex(0, &selected, &pStreamDescriptor);
+        BREAK_ON_FAIL(hr);
+
+        hr = pStreamDescriptor->GetMediaTypeHandler(&pHandler);
+        BREAK_ON_FAIL(hr);
+
+        hr = pHandler->GetCurrentMediaType(&pMediaType);
+        BREAK_ON_FAIL(hr);
+
+        hr = MFCreateASFProfile(&pNewASFProfile);
+        BREAK_ON_FAIL(hr);
+
+        hr = pNewASFProfile->CreateStream(pMediaType, &pASFStreamConfig);
+        BREAK_ON_FAIL(hr);
+
+        hr = pASFStreamConfig->SetMediaType(pMediaType);
+        BREAK_ON_FAIL(hr);
+
+        hr = pASFStreamConfig->SetStreamNumber(1);
+        BREAK_ON_FAIL(hr);
+
+        hr = pNewASFProfile->SetStream(pASFStreamConfig);
+        BREAK_ON_FAIL(hr);
+    } while (false);
+
+    *ppAsfProfile = pNewASFProfile.Detach();
+    return hr;
+}
 
 //
 // Create a network sink that will listen for requests on the specified port.
@@ -49,10 +134,9 @@ HRESULT CTopoBuilder::RenderURL(PCWSTR fileUrl, HWND videoHwnd, bool addNetwork)
 HRESULT CTopoBuilder::CreateNetworkSink(DWORD requestPort)
 {
     HRESULT hr = S_OK;
-    CComPtr<IMFPresentationDescriptor> pPresDescriptor;
+    
     CComPtr<IMFASFProfile> pAsfProfile;
     CComQIPtr<IMFASFContentInfo> pAsfContentInfo;
-    
     CComPtr<IMFActivate> pByteStreamActivate;
     CComPtr<IMFActivate> pNetSinkActivate;
 
@@ -63,13 +147,10 @@ HRESULT CTopoBuilder::CreateNetworkSink(DWORD requestPort)
         // create an HTTP activator for the custom HTTP output byte stream object
         pByteStreamActivate = new (std::nothrow) CHttpOutputStreamActivate(requestPort);
         BREAK_ON_NULL(pByteStreamActivate, E_OUTOFMEMORY);
-        
-        // create the presentation descriptor for the source
-        hr = m_pSource->CreatePresentationDescriptor(&pPresDescriptor);
+                
         BREAK_ON_FAIL(hr);
 
-        // create the ASF profile from the presentation descriptor
-        hr = MFCreateASFProfileFromPresentationDescriptor(pPresDescriptor, &pAsfProfile);
+        hr = CreateASFProfile(&pAsfProfile);
         BREAK_ON_FAIL(hr);
 
         // create the ContentInfo object for the ASF profile
@@ -130,6 +211,49 @@ HRESULT CTopoBuilder::CreateMediaSource(PCWSTR sURL)
     return hr;
 }
 
+HRESULT CTopoBuilder::CreateMediaSource()
+{
+    IMFActivate **ppDevices;
+    UINT32 count;
+    HRESULT hr = S_OK;
+    MF_OBJECT_TYPE objectType = MF_OBJECT_INVALID;
+    CComPtr<IUnknown> pSource;
+    IMFAttributes *pAttributes = NULL;
+
+    do
+    {
+        hr = MFCreateAttributes(&pAttributes, 2);
+
+        BREAK_ON_FAIL(hr);
+
+        // Ask for source type = video capture devices.
+
+        hr = pAttributes->SetGUID(
+            MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE,
+            MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE_VIDCAP_GUID
+        );
+        hr = pAttributes->SetUINT32(
+            MFT_HW_TIMESTAMP_WITH_QPC_Attribute,
+            true
+        );
+
+        hr = MFEnumDeviceSources(pAttributes, &ppDevices, &count);
+        BREAK_ON_FAIL(hr);
+        hr = ppDevices[0]->ActivateObject(
+            __uuidof(IMFMediaSource),
+            (void**)&pSource
+        );
+        BREAK_ON_FAIL(hr);
+
+        // Get the IMFMediaSource interface from the media source.
+        m_pSource = pSource;
+    }
+    while(false);
+    // BREAK_ON_NULL(m_pSource, E_NOINTERFACE);
+
+    return hr;
+}
+
 
 
 //
@@ -179,6 +303,7 @@ HRESULT CTopoBuilder::CreateTopology(void)
         // Create the presentation descriptor for the media source - a container object that
         // holds a list of the streams and allows selection of streams that will be used.
         hr = m_pSource->CreatePresentationDescriptor(&pPresDescriptor);
+
         BREAK_ON_FAIL(hr);
 
         // Get the number of streams in the media source
@@ -429,6 +554,9 @@ HRESULT CTopoBuilder::CreateTeeNetworkTwig(IMFStreamDescriptor* pStreamDescripto
 
         // get the stream ID
         hr = pStreamDescriptor->GetStreamIdentifier(&streamId);
+
+        // TODO: Check how to avoid this
+        streamId = 1;
         BREAK_ON_FAIL(hr);
 
         // create the output topology node for one of the streams on the network sink
