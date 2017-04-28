@@ -1,93 +1,7 @@
 #include "TopoBuilder.h"
+#include "Helpers.h"
 #include <Wmcodecdsp.h>
-
-#ifndef OUR_GUID_ENTRY
-#define OUR_GUID_ENTRY(name, l, w1, w2, b1, b2, b3, b4, b5, b6, b7, b8) \
-    DEFINE_GUID(name, l, w1, w2, b1, b2, b3, b4, b5, b6, b7, b8);
-#endif
-
-// H.264 compressed video stream
-// 34363248-0000-0010-8000-00AA00389B71  'H264' == MEDIASUBTYPE_H264
-OUR_GUID_ENTRY(MEDIASUBTYPE_H264,
-    0x34363248, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71)
-
-    GUID GetSubtype(IMFMediaType * mediaType) {
-    GUID minorType;
-    HRESULT hr = mediaType->GetGUID(MF_MT_SUBTYPE, &minorType);
-    return minorType;
-}
-
-GUID GetMajorType(IMFMediaType * mediaType) {
-    GUID major;
-    HRESULT hr = mediaType->GetMajorType(&major);
-    return major;
-}
-
-HRESULT CopyAttribute(IMFAttributes *pSrc, IMFAttributes *pDest, const GUID& key)
-{
-    PROPVARIANT var;
-    PropVariantInit(&var);
-    HRESULT hr = S_OK;
-
-    hr = pSrc->GetItem(key, &var);
-    if (SUCCEEDED(hr))
-    {
-        hr = pDest->SetItem(key, var);
-    }
-    PropVariantClear(&var);
-    return hr;
-}
-
-HRESULT CopyVideoType(IMFMediaType * in_media_type, IMFMediaType * out_mf_media_type) {
-    UINT32 frameRate = 0;
-    UINT32 frameRateDenominator;
-    UINT32 aspectRatio = 0;
-    UINT32 denominator = 0;
-    UINT32 width, height, bitrate;
-    HRESULT hr = S_OK;
-    if (SUCCEEDED(in_media_type->GetUINT32(MF_MT_AVG_BITRATE, &bitrate)))
-    {
-        out_mf_media_type->SetUINT32(MF_MT_AVG_BITRATE, bitrate);
-    }
-    hr = MFGetAttributeRatio(in_media_type, MF_MT_FRAME_SIZE, &width, &height);
-    hr = MFGetAttributeRatio(in_media_type, MF_MT_FRAME_RATE, &frameRate, &frameRateDenominator);
-    hr = MFGetAttributeRatio(in_media_type, MF_MT_PIXEL_ASPECT_RATIO, &aspectRatio, &denominator);
-    hr = MFSetAttributeRatio(out_mf_media_type, MF_MT_FRAME_SIZE, width, height);
-    hr = MFSetAttributeRatio(out_mf_media_type, MF_MT_FRAME_RATE, frameRate, frameRateDenominator);
-    hr = MFSetAttributeRatio(out_mf_media_type, MF_MT_PIXEL_ASPECT_RATIO, aspectRatio, denominator);
-    hr = CopyAttribute(in_media_type, out_mf_media_type, MF_MT_INTERLACE_MODE);
-    return hr;
-}
-
-HRESULT CopyAudioType(IMFMediaType * in_media_type, IMFMediaType * out_mf_media_type) {
-    HRESULT hr = S_OK;
-    hr = CopyAttribute(in_media_type, out_mf_media_type, MF_MT_AUDIO_NUM_CHANNELS);
-    hr = CopyAttribute(in_media_type, out_mf_media_type, MF_MT_AUDIO_SAMPLES_PER_SECOND);
-    hr = CopyAttribute(in_media_type, out_mf_media_type, MF_MT_AUDIO_BLOCK_ALIGNMENT);
-    hr = CopyAttribute(in_media_type, out_mf_media_type, MF_MT_AUDIO_AVG_BYTES_PER_SECOND);
-    hr = CopyAttribute(in_media_type, out_mf_media_type, MF_MT_AVG_BITRATE);
-    return hr;
-}
-
-HRESULT CopyType(IMFMediaType * in_media_type, IMFMediaType * out_mf_media_type) {
-    GUID major = GetMajorType(in_media_type);
-    HRESULT hr = S_OK;
-
-    if (major == MFMediaType_Audio)
-    {
-        hr = CopyAudioType(in_media_type, out_mf_media_type);
-    }
-    else if (major == MFMediaType_Video)
-    {
-        hr = CopyVideoType(in_media_type, out_mf_media_type);
-    }
-    else
-    {
-        hr = E_FAIL;
-    }
-
-    return hr;
-}
+#include <uuids.h>
 
 //
 // Initiates topology building from the file URL by first creating a media source, and then
@@ -164,14 +78,6 @@ HRESULT CTopoBuilder::RenderCamera(HWND videoHwnd, bool addNetwork)
     return hr;
 }
 
-IMFMediaType * CreateMediaType(GUID major, GUID minor) {
-    CComPtr<IMFMediaType> outputType = NULL;
-    HRESULT hr = MFCreateMediaType(&outputType);
-    
-    hr = outputType->SetGUID(MF_MT_MAJOR_TYPE, major);
-    hr = outputType->SetGUID(MF_MT_SUBTYPE, minor);
-    return outputType.Detach();
-}
 
 HRESULT CTopoBuilder::CreateASFProfile(IMFASFProfile** ppAsfProfile)
 {

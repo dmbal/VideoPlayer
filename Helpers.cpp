@@ -77,3 +77,12 @@ HRESULT CopyType(IMFMediaType * in_media_type, IMFMediaType * out_mf_media_type)
 
     return hr;
 }
+
+IMFMediaType * CreateMediaType(GUID major, GUID minor) {
+    CComPtr<IMFMediaType> outputType = NULL;
+    HRESULT hr = MFCreateMediaType(&outputType);
+
+    hr = outputType->SetGUID(MF_MT_MAJOR_TYPE, major);
+    hr = outputType->SetGUID(MF_MT_SUBTYPE, minor);
+    return outputType.Detach();
+}
