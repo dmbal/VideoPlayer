@@ -39,7 +39,7 @@ HRESULT CByteStreamWriteData::SendCallback(HRESULT status)
     if(SUCCEEDED(hr))
     {
         pResult->SetStatus(status);
-        hr = MFPutWorkItemEx(MFASYNC_CALLBACK_QUEUE_STANDARD, pResult);
+        hr = MFPutWorkItemEx(MFASYNC_CALLBACK_QUEUE_MULTITHREADED, pResult);
     }
 
     return hr;

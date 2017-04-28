@@ -12,7 +12,7 @@
 
 char HttpResponseHeader[] = 
     "HTTP/1.1 200 OK\r\n\
-Content-Type: video/x-ms-asf\r\n\
+Content-Type: video/H264\r\n\
 Server: Microsoft-HTTPAPI/2.0\r\n\
 Accept-Ranges: none\r\n\
 TransferMode.DLNA.ORG: Streaming\r\n\

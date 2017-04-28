@@ -78,7 +78,6 @@ HRESULT CTopoBuilder::RenderCamera(HWND videoHwnd, bool addNetwork)
     return hr;
 }
 
-
 HRESULT CTopoBuilder::CreateASFProfile(IMFASFProfile** ppAsfProfile)
 {
     /////////////////////////// 
@@ -152,6 +151,8 @@ HRESULT CTopoBuilder::CreateNetworkSink(DWORD requestPort)
         // create an HTTP activator for the custom HTTP output byte stream object
         pByteStreamActivate = new (std::nothrow) CHttpOutputStreamActivate(requestPort);
         BREAK_ON_NULL(pByteStreamActivate, E_OUTOFMEMORY);
+                
+        BREAK_ON_FAIL(hr);
 
         hr = CreateASFProfile(&pAsfProfile);
         BREAK_ON_FAIL(hr);
@@ -381,7 +382,7 @@ HRESULT CTopoBuilder::AddBranchToPartialTopology(
             hr = m_pTopology->AddNode(pSourceNode);
             BREAK_ON_FAIL(hr);
 
-            hr = m_pTopology->AddNode(pOutputNode);
+            //hr = m_pTopology->AddNode(pOutputNode);
             BREAK_ON_FAIL(hr);
             
 
@@ -724,29 +725,30 @@ HRESULT CTopoBuilder::CreateTeeNetworkTwig(IMFStreamDescriptor* pStreamDescripto
 
         pNetworkOutputNode = AddEncoderIfNeed(m_pTopology, transform, pMediaType.Detach(), pNetworkOutputNode.Detach());
         
+        *ppTeeNode = pNetworkOutputNode.Detach();
         
         // create the topology Tee node
-        hr = MFCreateTopologyNode(MF_TOPOLOGY_TEE_NODE, &pTeeNode);
-        BREAK_ON_FAIL(hr);
+        //hr = MFCreateTopologyNode(MF_TOPOLOGY_TEE_NODE, &pTeeNode);
+        //BREAK_ON_FAIL(hr);
 
-        // connect the first Tee node output to the network sink node
-        hr = pTeeNode->ConnectOutput(0, pNetworkOutputNode, 0);
-        BREAK_ON_FAIL(hr);
+        //// connect the first Tee node output to the network sink node
+        //hr = pTeeNode->ConnectOutput(0, pNetworkOutputNode, 0);
+        //BREAK_ON_FAIL(hr);
 
-        // if a renderer node was created and passed in, add it to the topology
-        if(pRendererNode != NULL)
-        {
-            // add the renderer node to the topology
-            hr = m_pTopology->AddNode(pRendererNode);
-            BREAK_ON_FAIL(hr);
+        //// if a renderer node was created and passed in, add it to the topology
+        //if(pRendererNode != NULL)
+        //{
+        //    // add the renderer node to the topology
+        //    hr = m_pTopology->AddNode(pRendererNode);
+        //    BREAK_ON_FAIL(hr);
 
-            // connect the second Tee node output to the renderer sink node
-            hr = pTeeNode->ConnectOutput(1, pRendererNode, 0);
-            BREAK_ON_FAIL(hr);
-        }
+        //    // connect the second Tee node output to the renderer sink node
+        //    hr = pTeeNode->ConnectOutput(1, pRendererNode, 0);
+        //    BREAK_ON_FAIL(hr);
+        //}
 
-        // detach the Tee node and return it as the output node
-        *ppTeeNode = pTeeNode.Detach();
+        //// detach the Tee node and return it as the output node
+        //*ppTeeNode = pTeeNode.Detach();
     }
     while(false);
 
