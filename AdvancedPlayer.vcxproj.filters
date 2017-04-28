@@ -19,6 +19,9 @@
     <ClCompile Include="HttpOutputStreamActivate.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Helpers.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Common.h">
@@ -40,6 +43,9 @@
       <Filter>Header files</Filter>
     </ClInclude>
     <ClInclude Include="HttpOutputStreamActivate.h">
+      <Filter>Header files</Filter>
+    </ClInclude>
+    <ClInclude Include="Helpers.h">
       <Filter>Header files</Filter>
     </ClInclude>
   </ItemGroup>
