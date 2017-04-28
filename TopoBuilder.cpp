@@ -147,8 +147,6 @@ HRESULT CTopoBuilder::CreateNetworkSink(DWORD requestPort)
         // create an HTTP activator for the custom HTTP output byte stream object
         pByteStreamActivate = new (std::nothrow) CHttpOutputStreamActivate(requestPort);
         BREAK_ON_NULL(pByteStreamActivate, E_OUTOFMEMORY);
-                
-        BREAK_ON_FAIL(hr);
 
         hr = CreateASFProfile(&pAsfProfile);
         BREAK_ON_FAIL(hr);

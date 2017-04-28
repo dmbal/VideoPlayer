@@ -220,6 +220,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="ByteStreamWriteData.cpp" />
+    <ClCompile Include="Helpers.cpp" />
     <ClCompile Include="HttpOutputStreamActivate.cpp" />
     <ClCompile Include="HttpOutputByteStream.cpp" />
     <ClCompile Include="Player.cpp" />
@@ -229,6 +230,7 @@
   <ItemGroup>
     <ClInclude Include="ByteStreamWriteData.h" />
     <ClInclude Include="Common.h" />
+    <ClInclude Include="Helpers.h" />
     <ClInclude Include="HttpOutputStreamActivate.h" />
     <ClInclude Include="HttpOutputByteStream.h" />
     <ClInclude Include="Player.h" />
