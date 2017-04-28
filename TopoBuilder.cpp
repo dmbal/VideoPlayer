@@ -1,6 +1,93 @@
 #include "TopoBuilder.h"
+#include <Wmcodecdsp.h>
 
+#ifndef OUR_GUID_ENTRY
+#define OUR_GUID_ENTRY(name, l, w1, w2, b1, b2, b3, b4, b5, b6, b7, b8) \
+    DEFINE_GUID(name, l, w1, w2, b1, b2, b3, b4, b5, b6, b7, b8);
+#endif
 
+// H.264 compressed video stream
+// 34363248-0000-0010-8000-00AA00389B71  'H264' == MEDIASUBTYPE_H264
+OUR_GUID_ENTRY(MEDIASUBTYPE_H264,
+    0x34363248, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71)
+
+    GUID GetSubtype(IMFMediaType * mediaType) {
+    GUID minorType;
+    HRESULT hr = mediaType->GetGUID(MF_MT_SUBTYPE, &minorType);
+    return minorType;
+}
+
+GUID GetMajorType(IMFMediaType * mediaType) {
+    GUID major;
+    HRESULT hr = mediaType->GetMajorType(&major);
+    return major;
+}
+
+HRESULT CopyAttribute(IMFAttributes *pSrc, IMFAttributes *pDest, const GUID& key)
+{
+    PROPVARIANT var;
+    PropVariantInit(&var);
+    HRESULT hr = S_OK;
+
+    hr = pSrc->GetItem(key, &var);
+    if (SUCCEEDED(hr))
+    {
+        hr = pDest->SetItem(key, var);
+    }
+    PropVariantClear(&var);
+    return hr;
+}
+
+HRESULT CopyVideoType(IMFMediaType * in_media_type, IMFMediaType * out_mf_media_type) {
+    UINT32 frameRate = 0;
+    UINT32 frameRateDenominator;
+    UINT32 aspectRatio = 0;
+    UINT32 denominator = 0;
+    UINT32 width, height, bitrate;
+    HRESULT hr = S_OK;
+    if (SUCCEEDED(in_media_type->GetUINT32(MF_MT_AVG_BITRATE, &bitrate)))
+    {
+        out_mf_media_type->SetUINT32(MF_MT_AVG_BITRATE, bitrate);
+    }
+    hr = MFGetAttributeRatio(in_media_type, MF_MT_FRAME_SIZE, &width, &height);
+    hr = MFGetAttributeRatio(in_media_type, MF_MT_FRAME_RATE, &frameRate, &frameRateDenominator);
+    hr = MFGetAttributeRatio(in_media_type, MF_MT_PIXEL_ASPECT_RATIO, &aspectRatio, &denominator);
+    hr = MFSetAttributeRatio(out_mf_media_type, MF_MT_FRAME_SIZE, width, height);
+    hr = MFSetAttributeRatio(out_mf_media_type, MF_MT_FRAME_RATE, frameRate, frameRateDenominator);
+    hr = MFSetAttributeRatio(out_mf_media_type, MF_MT_PIXEL_ASPECT_RATIO, aspectRatio, denominator);
+    hr = CopyAttribute(in_media_type, out_mf_media_type, MF_MT_INTERLACE_MODE);
+    return hr;
+}
+
+HRESULT CopyAudioType(IMFMediaType * in_media_type, IMFMediaType * out_mf_media_type) {
+    HRESULT hr = S_OK;
+    hr = CopyAttribute(in_media_type, out_mf_media_type, MF_MT_AUDIO_NUM_CHANNELS);
+    hr = CopyAttribute(in_media_type, out_mf_media_type, MF_MT_AUDIO_SAMPLES_PER_SECOND);
+    hr = CopyAttribute(in_media_type, out_mf_media_type, MF_MT_AUDIO_BLOCK_ALIGNMENT);
+    hr = CopyAttribute(in_media_type, out_mf_media_type, MF_MT_AUDIO_AVG_BYTES_PER_SECOND);
+    hr = CopyAttribute(in_media_type, out_mf_media_type, MF_MT_AVG_BITRATE);
+    return hr;
+}
+
+HRESULT CopyType(IMFMediaType * in_media_type, IMFMediaType * out_mf_media_type) {
+    GUID major = GetMajorType(in_media_type);
+    HRESULT hr = S_OK;
+
+    if (major == MFMediaType_Audio)
+    {
+        hr = CopyAudioType(in_media_type, out_mf_media_type);
+    }
+    else if (major == MFMediaType_Video)
+    {
+        hr = CopyVideoType(in_media_type, out_mf_media_type);
+    }
+    else
+    {
+        hr = E_FAIL;
+    }
+
+    return hr;
+}
 
 //
 // Initiates topology building from the file URL by first creating a media source, and then
@@ -77,6 +164,15 @@ HRESULT CTopoBuilder::RenderCamera(HWND videoHwnd, bool addNetwork)
     return hr;
 }
 
+IMFMediaType * CreateMediaType(GUID major, GUID minor) {
+    CComPtr<IMFMediaType> outputType = NULL;
+    HRESULT hr = MFCreateMediaType(&outputType);
+    
+    hr = outputType->SetGUID(MF_MT_MAJOR_TYPE, major);
+    hr = outputType->SetGUID(MF_MT_SUBTYPE, minor);
+    return outputType.Detach();
+}
+
 HRESULT CTopoBuilder::CreateASFProfile(IMFASFProfile** ppAsfProfile)
 {
     /////////////////////////// 
@@ -111,10 +207,13 @@ HRESULT CTopoBuilder::CreateASFProfile(IMFASFProfile** ppAsfProfile)
         hr = MFCreateASFProfile(&pNewASFProfile);
         BREAK_ON_FAIL(hr);
 
-        hr = pNewASFProfile->CreateStream(pMediaType, &pASFStreamConfig);
+        CComPtr<IMFMediaType> out_mf_media_type = CreateMediaType(MFMediaType_Video, MFVideoFormat_H264);
+
+        hr = pNewASFProfile->CreateStream(out_mf_media_type, &pASFStreamConfig);
         BREAK_ON_FAIL(hr);
 
-        hr = pASFStreamConfig->SetMediaType(pMediaType);
+        hr = CopyType(pMediaType, out_mf_media_type);
+        hr = pASFStreamConfig->SetMediaType(out_mf_media_type);
         BREAK_ON_FAIL(hr);
 
         hr = pASFStreamConfig->SetStreamNumber(1);
@@ -530,7 +629,125 @@ HRESULT CTopoBuilder::CreateOutputNode(
     return hr;
 }
 
+IMFTransform* FindEncoderTransform(GUID major, GUID minor) {
+    UINT32 count = 0;
+    IMFActivate **ppActivate = NULL;
+    MFT_REGISTER_TYPE_INFO info = { 0 };
+    info.guidMajorType = major;
+    info.guidSubtype = minor;
+    MFTEnumEx(
+        MFT_CATEGORY_VIDEO_ENCODER,
+        0x00000073,
+        NULL,       // Input type
+        &info,      // Output type
+        &ppActivate,
+        &count);
 
+    IMFTransform *pEncoder;
+    // Create the first encoder in the list.
+    ppActivate[0]->ActivateObject(__uuidof(IMFTransform), reinterpret_cast<void**>(&pEncoder));
+    CoTaskMemFree(ppActivate);
+    return pEncoder;
+}
+
+
+
+HRESULT SetInputType(IMFTransform * transform, DWORD stream_index, IMFMediaType * in_media_type) {
+    GUID neededInputType = GetSubtype(in_media_type);
+    GUID major = GetMajorType(in_media_type);
+    CComPtr<IMFMediaType> copyType = CreateMediaType(major, neededInputType);
+    HRESULT hr = CopyType(in_media_type, copyType);
+
+    hr = transform->SetInputType(stream_index, copyType.Detach(), 0);
+    return hr;
+}
+
+HRESULT SetOutputType(IMFTransform * transform, DWORD stream_index, GUID out_format, IMFMediaType * in_media_type) {
+    HRESULT hr = S_OK;
+    GUID major = GetMajorType(in_media_type);
+    CComPtr<IMFMediaType> outputType = CreateMediaType(major, out_format);
+    hr = CopyType(in_media_type, outputType);
+
+    hr = transform->SetOutputType(stream_index, outputType.Detach(), 0);
+    return hr;
+}
+
+
+IMFTransform* CreateEncoderMft(IMFMediaType * in_media_type, GUID out_type, GUID out_subtype)
+{
+    CComPtr<IMFTransform> pEncoder = FindEncoderTransform(out_type, out_subtype);
+    HRESULT hr = S_OK;
+    DWORD inputstreamsCount;
+    DWORD outputstreamsCount;
+
+    hr = pEncoder->GetStreamCount(&inputstreamsCount, &outputstreamsCount);
+
+    HRESULT inputHr = SetInputType(pEncoder, 0, in_media_type);
+    hr = SetOutputType(pEncoder, 0, out_subtype, in_media_type);
+
+    DWORD mftStatus = 0;
+    pEncoder->GetInputStatus(0, &mftStatus);
+    if (MFT_INPUT_STATUS_ACCEPT_DATA != mftStatus) {
+        OutputDebugStringW(L"error");
+    }
+
+    if (FAILED(inputHr)) {
+        hr = SetInputType(pEncoder, 0, in_media_type);
+    }
+    return pEncoder.Detach();
+}
+
+IMFTransform* CreateColorConverterMFT()
+{
+    // register color converter locally
+    MFTRegisterLocalByCLSID(__uuidof(CColorConvertDMO), MFT_CATEGORY_VIDEO_PROCESSOR, L"", MFT_ENUM_FLAG_SYNCMFT, 0, NULL, 0, NULL);
+
+    // create color converter
+    IMFTransform *pColorConverterMFT = NULL;
+    CoCreateInstance(__uuidof(CColorConvertDMO), NULL, CLSCTX_INPROC_SERVER, IID_IMFTransform, reinterpret_cast<void**>(&pColorConverterMFT));
+
+    return pColorConverterMFT;
+}
+
+void AddTransformNode(
+    IMFTopology *pTopology,
+    IMFTransform *pMFT,
+    IMFTopologyNode *output,
+    IMFTopologyNode **ppNode)
+{
+    *ppNode = NULL;
+    CComPtr<IMFTopologyNode> pNode = NULL;
+
+    HRESULT hr = MFCreateTopologyNode(MF_TOPOLOGY_TRANSFORM_NODE, &pNode);
+
+    hr = pNode->SetObject(pMFT);
+
+    hr = pTopology->AddNode(pNode);
+
+    hr = pNode->ConnectOutput(0, output, 0);
+
+    *ppNode = pNode.Detach();
+}
+
+IMFTopologyNode* AddEncoderIfNeed(IMFTopology * topology, IMFTransform* transform, IMFMediaType * mediaType, IMFTopologyNode * output_node)
+{
+    if (transform != NULL)
+    {
+        CComPtr<IMFTopologyNode> transformNode;
+        CComPtr<IMFTopologyNode> colorConverterNode;
+
+        IMFTransform* color = CreateColorConverterMFT();
+        GUID minorType = GetSubtype(mediaType);
+
+        AddTransformNode(topology, transform, output_node, &transformNode);
+        AddTransformNode(topology, color, transformNode.Detach(), &colorConverterNode);
+        return colorConverterNode.Detach();
+    }
+    else
+    {
+        return output_node;
+    }
+}
 
 //
 // If there is a network sink, create a Tee node and hook the network sink in parallel to
@@ -571,9 +788,37 @@ HRESULT CTopoBuilder::CreateTeeNetworkTwig(IMFStreamDescriptor* pStreamDescripto
         hr = pNetworkOutputNode->SetObject(m_pNetworkSinkActivate);
         BREAK_ON_FAIL(hr);
 
+        CComPtr<IMFMediaTypeHandler> pHandler = NULL;
+        hr = pStreamDescriptor->GetMediaTypeHandler(&pHandler);
+        BREAK_ON_FAIL(hr);
+
+        CComPtr<IMFMediaType> pMediaType;
+        hr = pHandler->GetCurrentMediaType(&pMediaType);
+        BREAK_ON_FAIL(hr);
+        CComPtr<IMFTransform> transform = CreateEncoderMft(pMediaType, MFMediaType_Video, MEDIASUBTYPE_H264);
+
+        /*if (transform != NULL)
+        {
+            CComPtr<IMFMediaType> transformMediaType;
+            hr = transform->GetOutputCurrentType(0, &transformMediaType);
+            UINT32 pcbBlobSize = { 0 };
+            hr = transformMediaType->GetBlobSize(MF_MT_MPEG_SEQUENCE_HEADER, &pcbBlobSize);
+            UINT8* blob = new UINT8[pcbBlobSize];
+            hr = transformMediaType->GetBlob(MF_MT_MPEG_SEQUENCE_HEADER, blob, pcbBlobSize, NULL);
+            hr = out_mf_media_type->SetBlob(MF_MT_MPEG_SEQUENCE_HEADER, blob, pcbBlobSize);
+            delete[] blob;
+        }*/
+
+
         // add the network output topology node to the topology
         m_pTopology->AddNode(pNetworkOutputNode);
         BREAK_ON_FAIL(hr);
+
+        //CComPtr<IMFMediaType> out_mf_media_type = CreateMediaType(MFMediaType_Video, MFVideoFormat_H264);
+
+        //hr = CopyType(pMediaType, out_mf_media_type);
+
+        pNetworkOutputNode = AddEncoderIfNeed(m_pTopology, transform, pMediaType.Detach(), pNetworkOutputNode.Detach());
         
         
         // create the topology Tee node
