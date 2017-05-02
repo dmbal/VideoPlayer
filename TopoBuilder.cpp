@@ -49,7 +49,6 @@ HRESULT CTopoBuilder::RenderCamera(HWND videoHwnd, bool addNetwork)
     do
     {
         m_videoHwnd = videoHwnd;
-
         // The topology can have either a rendering sink (when videoHwnd is not NULL), a 
         // network sink, or both.
         if (videoHwnd == NULL && !addNetwork)

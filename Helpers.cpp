@@ -77,3 +77,49 @@ HRESULT CopyType(IMFMediaType * in_media_type, IMFMediaType * out_mf_media_type)
 
     return hr;
 }
+
+IMFMediaType * CreateMediaType(GUID major, GUID minor) 
+{
+    CComPtr<IMFMediaType> outputType = NULL;
+    do
+    {
+        HRESULT hr = MFCreateMediaType(&outputType);
+        BREAK_ON_FAIL(hr);
+        hr = outputType->SetGUID(MF_MT_MAJOR_TYPE, major);
+        BREAK_ON_FAIL(hr);
+        hr = outputType->SetGUID(MF_MT_SUBTYPE, minor);
+        BREAK_ON_FAIL(hr);
+    } while (false);
+
+    return outputType.Detach();
+}
+
+
+IMFTransform* FindEncoderTransform(GUID major, GUID minor) {
+    UINT32 count = 0;
+    IMFActivate **ppActivate = NULL;
+    MFT_REGISTER_TYPE_INFO info = { 0 };
+    info.guidMajorType = major;
+    info.guidSubtype = minor;
+
+    MFTEnumEx(
+        MFT_CATEGORY_VIDEO_ENCODER,
+        0x00000073,
+        NULL,       // Input type
+        &info,      // Output type
+        &ppActivate,
+        &count
+    );
+
+    if (count == 0)
+    {
+        THROW_ON_FAIL(MF_E_TOPO_CODEC_NOT_FOUND);
+    }
+    HRESULT hr;
+    IMFTransform *pEncoder;
+    // Create the first encoder in the list.
+    THROW_ON_FAIL(ppActivate[0]->ActivateObject(__uuidof(IMFTransform), (void**)&pEncoder));
+
+    CoTaskMemFree(ppActivate);
+    return pEncoder;
+}
