@@ -224,6 +224,7 @@
     <ClCompile Include="HttpOutputStreamActivate.cpp" />
     <ClCompile Include="HttpOutputByteStream.cpp" />
     <ClCompile Include="Player.cpp" />
+    <ClCompile Include="SampleTransform.cpp" />
     <ClCompile Include="TopoBuilder.cpp" />
     <ClCompile Include="winmain.cpp" />
   </ItemGroup>
@@ -235,6 +236,7 @@
     <ClInclude Include="HttpOutputByteStream.h" />
     <ClInclude Include="Player.h" />
     <ClInclude Include="resource.h" />
+    <ClInclude Include="SampleTransform.h" />
     <ClInclude Include="TopoBuilder.h" />
   </ItemGroup>
   <ItemGroup>
