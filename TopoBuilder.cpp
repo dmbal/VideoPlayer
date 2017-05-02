@@ -1,6 +1,20 @@
 #include "TopoBuilder.h"
+#include "SampleTransform.h"
+#include <Wmcodecdsp.h>
 
+IMFTransform* CreateColorConverterMFT()
+{
+    HRESULT hr = S_OK;
+    //register color converter locally
+    hr = MFTRegisterLocalByCLSID(__uuidof(CColorConvertDMO), MFT_CATEGORY_VIDEO_PROCESSOR, L"", MFT_ENUM_FLAG_SYNCMFT, 0, NULL, 0, NULL);
+    THROW_ON_FAIL(hr);
+    //create color converter
+    IMFTransform *pColorConverterMFT = NULL;
+    hr = CoCreateInstance(__uuidof(CColorConvertDMO), NULL, CLSCTX_INPROC_SERVER, IID_IMFTransform, (void**)&pColorConverterMFT);
+    THROW_ON_FAIL(hr);
 
+    return pColorConverterMFT;
+}
 
 //
 // Initiates topology building from the file URL by first creating a media source, and then
@@ -376,12 +390,14 @@ HRESULT CTopoBuilder::AddBranchToPartialTopology(
             BREAK_ON_FAIL(hr);
 
             hr = m_pTopology->AddNode(pOutputNode);
-            BREAK_ON_FAIL(hr);
+            THROW_ON_FAIL(hr);
             
 
             // Connect the source node to the output node.  The topology will find the
             // intermediate nodes needed to convert media types.
             hr = pSourceNode->ConnectOutput(0, pOutputNode, 0);
+
+            UnwrapPartialTopo(pSourceNode, 0);
         }
     }
     while(false);
@@ -435,7 +451,42 @@ HRESULT CTopoBuilder::CreateSourceStreamNode(
 }
 
 
+HRESULT AddOldOutputToTopo(
+    IMFTopology *pTopology,     // Topology.
+    IMFTransform *pMFT,         // MFT.
+    IMFTopologyNode *output,
+    IMFTopologyNode **ppNode    // Receives the node pointer.
+)
+{
+    *ppNode = NULL;
 
+    CComPtr<IMFTopologyNode> pNode = NULL;
+
+    // Create the node.
+    HRESULT hr = MFCreateTopologyNode(MF_TOPOLOGY_TRANSFORM_NODE, &pNode);
+    THROW_ON_FAIL(hr);
+
+    // Set the object pointer.
+    hr = pNode->SetObject(pMFT);
+    THROW_ON_FAIL(hr);
+
+    hr = pNode->SetUINT32(MF_TOPONODE_STREAMID, 0);
+    THROW_ON_FAIL(hr);
+
+    hr = pNode->ConnectOutput(0, output, 0);
+    THROW_ON_FAIL(hr);
+
+    // Add the node to the topology.
+    hr = pTopology->AddNode(output);
+    THROW_ON_FAIL(hr);
+
+    // Return the pointer to the caller.
+
+    *ppNode = pNode;
+    (*ppNode)->AddRef();
+
+    return hr;
+}
 
 //
 //  This function creates an output node for a stream (sink) by going through the
@@ -511,6 +562,22 @@ HRESULT CTopoBuilder::CreateOutputNode(
             hr = pOutputNode->SetObject(pRendererActivate);
             BREAK_ON_FAIL(hr);
         }
+        CComPtr<IMFMediaType> pCurrentMediaType;
+        hr = pHandler->GetCurrentMediaType(&pCurrentMediaType);
+        BREAK_ON_FAIL(hr);
+
+        CComPtr<IMFTopologyNode> pOldOutput = pOutputNode;
+        pOutputNode = NULL;
+        hr = AddSampleTransform(pCurrentMediaType, pOldOutput, &pOutputNode);
+        BREAK_ON_FAIL(hr);
+
+        //pOldOutput = pOutputNode;
+        //pOutputNode = NULL;
+        //CComPtr<IMFTransform> color = CreateColorConverterMFT();
+        //CComPtr<IMFTopologyNode> colorConverterNode;
+        //hr = AddOldOutputToTopo(m_pTopology, color, pOldOutput, &colorConverterNode);
+        //THROW_ON_FAIL(hr);
+        //pOutputNode = colorConverterNode.Detach();
 
         if(m_pNetworkSinkActivate != NULL)
         {
@@ -519,7 +586,7 @@ HRESULT CTopoBuilder::CreateOutputNode(
             hr = CreateTeeNetworkTwig(pStreamDescriptor, pOldOutput, &pOutputNode);
             BREAK_ON_FAIL(hr);
         }
-
+        UnwrapPartialTopo(pOutputNode, 0);
         *ppOutputNode = pOutputNode.Detach();
     }
     while(false);
@@ -527,7 +594,34 @@ HRESULT CTopoBuilder::CreateOutputNode(
     return hr;
 }
 
+HRESULT CTopoBuilder::AddSampleTransform(IMFMediaType* mediaType, IMFTopologyNode* pOldOutputNode, IMFTopologyNode** ppNewOutputNode)
+{
+    HRESULT hr = S_OK;
+    do
+    {
+        CComPtr<IMFMediaType> inputMediaType;
+        CComPtr<IMFMediaType> outputMediaType;
+        hr = MFCreateMediaType(&inputMediaType);
+        hr = MFCreateMediaType(&outputMediaType);
+        CopyVideoType(mediaType, inputMediaType);
+        CopyVideoType(mediaType, outputMediaType);
 
+        CComPtr<IMFTopologyNode> sampleTransformNode;
+        CComPtr<IMFTransform> sampleTransform = new (std::nothrow) SampleTransform();
+        //hr = sampleTransform->SetInputType(0, inputMediaType, 0);
+        //THROW_ON_FAIL(hr);
+        //hr = sampleTransform->SetOutputType(0, outputMediaType, 0);
+        //THROW_ON_FAIL(hr);
+
+        pOldOutputNode->SetInputPrefType(0, inputMediaType);
+        hr = AddOldOutputToTopo(m_pTopology, sampleTransform, pOldOutputNode, &sampleTransformNode);
+        BREAK_ON_FAIL(hr);
+
+        *ppNewOutputNode = sampleTransformNode.Detach();
+    } 
+    while (false);
+    return hr;
+}
 
 //
 // If there is a network sink, create a Tee node and hook the network sink in parallel to

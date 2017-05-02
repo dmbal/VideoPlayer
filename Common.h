@@ -13,7 +13,7 @@ using namespace ATL;
 
 static void CheckHR(HRESULT hr);
 
-#define BREAK_ON_FAIL(value)            if(FAILED(value)) break;
+#define BREAK_ON_FAIL(value)            if(FAILED(value)) { throw _com_error(value); }
 #define BREAK_ON_NULL(value, newHr)     if(value == NULL) { hr = newHr; break; }
 #define THROW_ON_FAIL(value)     if(FAILED(value)) { throw _com_error(value); }
 

@@ -939,6 +939,10 @@ HRESULT SampleTransform::GetSupportedMediaType(
         else if (dwTypeIndex == 4) {
             hr = pmt->SetGUID(MF_MT_SUBTYPE, MFVideoFormat_IYUV);
         }
+        else if (dwTypeIndex == 5)
+        {
+            hr = pmt->SetGUID(MF_MT_SUBTYPE, MFVideoFormat_RGB24);
+        }
         else
         {
             // if we don't have any more media types, return an error signifying
@@ -995,7 +999,7 @@ HRESULT SampleTransform::CheckMediaType(IMFMediaType* pmt)
 
         // verify that the specified media type has one of the acceptable subtypes -
         // this filter will accept only NV12 and UYVY uncompressed subtypes.
-        if (subtype != MEDIASUBTYPE_H264 && subtype != MEDIASUBTYPE_RGB24 && subtype != MEDIASUBTYPE_RGB32 && subtype != MEDIASUBTYPE_YUY2 && subtype != MFVideoFormat_IYUV)
+        if (subtype != MEDIASUBTYPE_H264 && subtype != MFVideoFormat_RGB24 && subtype != MEDIASUBTYPE_RGB24 && subtype != MEDIASUBTYPE_RGB32 && subtype != MEDIASUBTYPE_YUY2 && subtype != MFVideoFormat_IYUV)
         {
 
             hr = MF_E_INVALIDMEDIATYPE;

@@ -63,5 +63,7 @@ class CTopoBuilder
 
         HRESULT CreateTeeNetworkTwig(IMFStreamDescriptor* pStreamDescriptor, 
             IMFTopologyNode* pRendererNode, IMFTopologyNode** ppTeeNode);
+
+        HRESULT AddSampleTransform(IMFMediaType* mediaType, IMFTopologyNode* pOldOutputNode, IMFTopologyNode** ppNewOutputNode);
 };
 
