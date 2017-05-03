@@ -1,7 +1,7 @@
 #define WIN32_LEAN_AND_MEAN
 #include <winsock2.h>
 #include <ws2tcpip.h>
-
+#include <time.h>
 #include "HttpOutputByteStream.h"
 
 
@@ -535,8 +535,21 @@ HRESULT CHttpOutputByteStream::SendData(const BYTE* data, DWORD dataLength)
         {
             if(m_clientSocket != INVALID_SOCKET)
             {
-                sendResult = send( m_clientSocket, (const char*)m_pOutputBuffer, m_dwOutputDataCollected, 0 );
+                clock_t t1, t2;
+                t1 = clock();
+                sendResult = send(m_clientSocket, (const char*)m_pOutputBuffer, m_dwOutputDataCollected, 0);
+                t2 = clock();
+                DWORD diff = ((DWORD)t2 - (DWORD)t1);
+                wchar_t charArr[10];
+                swprintf_s(charArr, 10, L"%d", diff);
+                OutputDebugStringW(L"------------ ");
+                OutputDebugStringW(charArr);
+                OutputDebugStringW(L"\n");
 
+                swprintf_s(charArr, 10, L"%d", m_dwOutputDataCollected);
+                OutputDebugStringW(L"------------ Data sent:  ");
+                OutputDebugStringW(charArr);
+                OutputDebugStringW(L"\n");
                 if (sendResult == SOCKET_ERROR) 
                 {
                     hr = HRESULT_FROM_WIN32(WSAGetLastError());

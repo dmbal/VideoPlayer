@@ -571,13 +571,13 @@ HRESULT CTopoBuilder::CreateOutputNode(
         hr = AddSampleTransform(pCurrentMediaType, pOldOutput, &pOutputNode);
         BREAK_ON_FAIL(hr);
 
-        //pOldOutput = pOutputNode;
-        //pOutputNode = NULL;
-        //CComPtr<IMFTransform> color = CreateColorConverterMFT();
-        //CComPtr<IMFTopologyNode> colorConverterNode;
-        //hr = AddOldOutputToTopo(m_pTopology, color, pOldOutput, &colorConverterNode);
-        //THROW_ON_FAIL(hr);
-        //pOutputNode = colorConverterNode.Detach();
+        pOldOutput = pOutputNode;
+        pOutputNode = NULL;
+        CComPtr<IMFTransform> color = CreateColorConverterMFT();
+        CComPtr<IMFTopologyNode> colorConverterNode;
+        hr = AddOldOutputToTopo(m_pTopology, color, pOldOutput, &colorConverterNode);
+        THROW_ON_FAIL(hr);
+        pOutputNode = colorConverterNode.Detach();
 
         if(m_pNetworkSinkActivate != NULL)
         {
