@@ -207,7 +207,9 @@ HRESULT CTopoBuilder::CreateMediaSource(PCWSTR sURL)
         BREAK_ON_FAIL(hr);
 
         // Get the IMFMediaSource interface from the media source.
-        m_pSource = pSource;
+
+        hr = pSource->QueryInterface(IID_PPV_ARGS(&m_pSource));
+        //m_pSource = pSource;
         BREAK_ON_NULL(m_pSource, E_NOINTERFACE);
     }
     while(false);
@@ -441,99 +443,6 @@ HRESULT CTopoBuilder::CreateSourceStreamNode(
     return hr;
 }
 
-
-
-
-//
-//  This function creates an output node for a stream (sink) by going through the
-//  following steps:
-//  1. Select a renderer based on the media type of the stream - EVR or SAR.
-//  2. Create an IActivate object for the renderer.
-//  3. Create an output topology node.
-//  4. Put the IActivate pointer in the node.
-//
-//  pStreamDescriptor: pointer to the descriptor for the stream that we are working
-//  with.
-//  hwndVideo: handle to the video window used if this is the video stream.  If this is
-//  an audio stream this parameter is not used.
-//  pNode: reference to a pointer to the new node.
-//
-HRESULT CTopoBuilder::CreateOutputNode(
-    CComPtr<IMFStreamDescriptor> pStreamDescriptor,
-    HWND hwndVideo,
-    IMFTopologyNode* pSNode,
-    IMFTopologyNode** ppOutputNode)
-{
-    HRESULT hr = S_OK;
-    CComPtr<IMFMediaTypeHandler> pHandler = NULL;
-    CComPtr<IMFActivate> pRendererActivate = NULL;
-    CComPtr<IMFTopologyNode> pSourceNode = pSNode;
-    CComPtr<IMFTopologyNode> pOutputNode;
-
-    GUID majorType = GUID_NULL;
-
-    do
-    {
-        if(m_videoHwnd != NULL)
-        {
-            // Get the media type handler for the stream which will be used to process
-            // the media types of the stream.  The handler stores the media type.
-            hr = pStreamDescriptor->GetMediaTypeHandler(&pHandler);
-            BREAK_ON_FAIL(hr);
-
-            // Get the major media type (e.g. video or audio)
-            hr = pHandler->GetMajorType(&majorType);
-            BREAK_ON_FAIL(hr);
-
-            // Create an IMFActivate controller object for the renderer, based on the media type.
-            // The activation objects are used by the session in order to create the renderers only when 
-            // they are needed - IE only right before starting playback.  The activation objects are also
-            // used to shut down the renderers.
-            if (majorType == MFMediaType_Audio)
-            {
-                // if the stream major type is audio, create the audio renderer.
-                hr = MFCreateAudioRendererActivate(&pRendererActivate);
-            }
-            else if (majorType == MFMediaType_Video)
-            {
-                // if the stream major type is video, create the video renderer, passing in the video
-                // window handle - that's where the video will be playing.
-                hr = MFCreateVideoRendererActivate(hwndVideo, &pRendererActivate);
-            }
-            else
-            {
-                // fail if the stream type is not video or audio.  For example fail
-                // if we encounter a CC stream.
-                hr = E_FAIL;
-            }
-
-            BREAK_ON_FAIL(hr);
-
-            // Create the node which will represent the renderer
-            hr = MFCreateTopologyNode(MF_TOPOLOGY_OUTPUT_NODE, &pOutputNode);
-            BREAK_ON_FAIL(hr);
-
-            // Store the IActivate object in the sink node - it will be extracted later by the
-            // media session during the topology render phase.
-            hr = pOutputNode->SetObject(pRendererActivate);
-            BREAK_ON_FAIL(hr);
-        }
-
-        if(m_pNetworkSinkActivate != NULL)
-        {
-            CComPtr<IMFTopologyNode> pOldOutput = pOutputNode;
-            pOutputNode = NULL;
-            hr = CreateTeeNetworkTwig(pStreamDescriptor, pOldOutput, &pOutputNode);
-            BREAK_ON_FAIL(hr);
-        }
-
-        *ppOutputNode = pOutputNode.Detach();
-    }
-    while(false);
-
-    return hr;
-}
-
 IMFTransform* FindEncoderTransform(GUID major, GUID minor) {
     UINT32 count = 0;
     IMFActivate **ppActivate = NULL;
@@ -555,7 +464,26 @@ IMFTransform* FindEncoderTransform(GUID major, GUID minor) {
     return pEncoder;
 }
 
+IMFTransform* FindDecoderTransform(GUID major, GUID minor) {
+    UINT32 count = 0;
+    IMFActivate **ppActivate = NULL;
+    MFT_REGISTER_TYPE_INFO info = { 0 };
+    info.guidMajorType = major;
+    info.guidSubtype = minor;
+    MFTEnumEx(
+        MFT_CATEGORY_VIDEO_DECODER,
+        0x00000073,
+        NULL,       // Input type
+        &info,      // Output type
+        &ppActivate,
+        &count);
 
+    IMFTransform *pEncoder;
+    // Create the first encoder in the list.
+    ppActivate[0]->ActivateObject(__uuidof(IMFTransform), reinterpret_cast<void**>(&pEncoder));
+    CoTaskMemFree(ppActivate);
+    return pEncoder;
+}
 
 HRESULT SetInputType(IMFTransform * transform, DWORD stream_index, IMFMediaType * in_media_type) {
     GUID neededInputType = GetSubtype(in_media_type);
@@ -578,9 +506,18 @@ HRESULT SetOutputType(IMFTransform * transform, DWORD stream_index, GUID out_for
 }
 
 
-IMFTransform* CreateEncoderMft(IMFMediaType * in_media_type, GUID out_type, GUID out_subtype)
+IMFTransform* CreateEncoderOrDecoderMft(IMFMediaType * in_media_type, GUID out_type, GUID out_subtype, bool encode)
 {
-    CComPtr<IMFTransform> pEncoder = FindEncoderTransform(out_type, out_subtype);
+    CComPtr<IMFTransform> pEncoder;
+    if (encode == true)
+    {
+        pEncoder = FindEncoderTransform(out_type, out_subtype);
+    }
+    else
+    {
+        pEncoder = FindDecoderTransform(out_type, out_subtype);
+    }
+
     HRESULT hr = S_OK;
     DWORD inputstreamsCount;
     DWORD outputstreamsCount;
@@ -634,24 +571,140 @@ void AddTransformNode(
     *ppNode = pNode.Detach();
 }
 
-IMFTopologyNode* AddEncoderIfNeed(IMFTopology * topology, IMFTransform* transform, IMFMediaType * mediaType, IMFTopologyNode * output_node)
+IMFTopologyNode* AddEncoderIfNeed(IMFTopology * topology, IMFTransform* transform, IMFMediaType * mediaType, IMFTopologyNode * output_node, bool colorConvert)
 {
     if (transform != NULL)
     {
         CComPtr<IMFTopologyNode> transformNode;
         CComPtr<IMFTopologyNode> colorConverterNode;
+        IMFTransform* color;
 
-        IMFTransform* color = CreateColorConverterMFT();
-        GUID minorType = GetSubtype(mediaType);
+        if (colorConvert == true)
+        {
+            color = CreateColorConverterMFT();
+            GUID minorType = GetSubtype(mediaType);
+        }
 
         AddTransformNode(topology, transform, output_node, &transformNode);
-        AddTransformNode(topology, color, transformNode.Detach(), &colorConverterNode);
-        return colorConverterNode.Detach();
+
+        if (colorConvert == true)
+        {
+            AddTransformNode(topology, color, transformNode.Detach(), &colorConverterNode);
+            return colorConverterNode.Detach();
+        }
+        else
+        {
+            return transformNode.Detach();
+        }
     }
     else
     {
         return output_node;
     }
+}
+
+//
+//  This function creates an output node for a stream (sink) by going through the
+//  following steps:
+//  1. Select a renderer based on the media type of the stream - EVR or SAR.
+//  2. Create an IActivate object for the renderer.
+//  3. Create an output topology node.
+//  4. Put the IActivate pointer in the node.
+//
+//  pStreamDescriptor: pointer to the descriptor for the stream that we are working
+//  with.
+//  hwndVideo: handle to the video window used if this is the video stream.  If this is
+//  an audio stream this parameter is not used.
+//  pNode: reference to a pointer to the new node.
+//
+HRESULT CTopoBuilder::CreateOutputNode(
+    CComPtr<IMFStreamDescriptor> pStreamDescriptor,
+    HWND hwndVideo,
+    IMFTopologyNode* pSNode,
+    IMFTopologyNode** ppOutputNode)
+{
+    HRESULT hr = S_OK;
+    CComPtr<IMFMediaTypeHandler> pHandler = NULL;
+    CComPtr<IMFActivate> pRendererActivate = NULL;
+    CComPtr<IMFTopologyNode> pSourceNode = pSNode;
+    CComPtr<IMFTopologyNode> pOutputNode;
+
+    GUID majorType = GUID_NULL;
+
+    do
+    {
+        if (m_videoHwnd != NULL)
+        {
+            // Get the media type handler for the stream which will be used to process
+            // the media types of the stream.  The handler stores the media type.
+            hr = pStreamDescriptor->GetMediaTypeHandler(&pHandler);
+            BREAK_ON_FAIL(hr);
+
+            // Get the major media type (e.g. video or audio)
+            hr = pHandler->GetMajorType(&majorType);
+            BREAK_ON_FAIL(hr);
+
+            // Create an IMFActivate controller object for the renderer, based on the media type.
+            // The activation objects are used by the session in order to create the renderers only when 
+            // they are needed - IE only right before starting playback.  The activation objects are also
+            // used to shut down the renderers.
+            if (majorType == MFMediaType_Audio)
+            {
+                // if the stream major type is audio, create the audio renderer.
+                hr = MFCreateAudioRendererActivate(&pRendererActivate);
+            }
+            else if (majorType == MFMediaType_Video)
+            {
+                // if the stream major type is video, create the video renderer, passing in the video
+                // window handle - that's where the video will be playing.
+                hr = MFCreateVideoRendererActivate(hwndVideo, &pRendererActivate);
+            }
+            else
+            {
+                // fail if the stream type is not video or audio.  For example fail
+                // if we encounter a CC stream.
+                hr = E_FAIL;
+            }
+
+            BREAK_ON_FAIL(hr);
+
+            // Create the node which will represent the renderer
+            hr = MFCreateTopologyNode(MF_TOPOLOGY_OUTPUT_NODE, &pOutputNode);
+            BREAK_ON_FAIL(hr);
+
+            // Store the IActivate object in the sink node - it will be extracted later by the
+            // media session during the topology render phase.
+            hr = pOutputNode->SetObject(pRendererActivate);
+            BREAK_ON_FAIL(hr);
+
+            // Get the major media type (e.g. video or audio)
+            CComPtr<IMFMediaType> pMediaType;
+            hr = pHandler->GetCurrentMediaType(&pMediaType);
+            BREAK_ON_FAIL(hr);
+
+            GUID minorType = GetSubtype(pMediaType);
+            if (minorType == MEDIASUBTYPE_H264)
+            {
+                //CComPtr<IMFTransform> transform = CreateEncoderOrDecoderMft(pMediaType, MFMediaType_Video, MEDIASUBTYPE_NV12, false);
+                //pOutputNode = AddEncoderIfNeed(m_pTopology, transform, pMediaType.Detach(), pOutputNode.Detach(), false);
+                hr = m_pTopology->AddNode(pOutputNode);
+                BREAK_ON_FAIL(hr);
+
+            }
+        }
+
+        if (m_pNetworkSinkActivate != NULL)
+        {
+            CComPtr<IMFTopologyNode> pOldOutput = pOutputNode;
+            pOutputNode = NULL;
+            hr = CreateTeeNetworkTwig(pStreamDescriptor, pOldOutput, &pOutputNode);
+            BREAK_ON_FAIL(hr);
+        }
+
+        *ppOutputNode = pOutputNode.Detach();
+    } while (false);
+
+    return hr;
 }
 
 //
@@ -700,7 +753,7 @@ HRESULT CTopoBuilder::CreateTeeNetworkTwig(IMFStreamDescriptor* pStreamDescripto
         CComPtr<IMFMediaType> pMediaType;
         hr = pHandler->GetCurrentMediaType(&pMediaType);
         BREAK_ON_FAIL(hr);
-        CComPtr<IMFTransform> transform = CreateEncoderMft(pMediaType, MFMediaType_Video, MEDIASUBTYPE_H264);
+        CComPtr<IMFTransform> transform = CreateEncoderOrDecoderMft(pMediaType, MFMediaType_Video, MEDIASUBTYPE_H264, true);
 
         /*if (transform != NULL)
         {
@@ -723,32 +776,32 @@ HRESULT CTopoBuilder::CreateTeeNetworkTwig(IMFStreamDescriptor* pStreamDescripto
 
         //hr = CopyType(pMediaType, out_mf_media_type);
 
-        pNetworkOutputNode = AddEncoderIfNeed(m_pTopology, transform, pMediaType.Detach(), pNetworkOutputNode.Detach());
+        pNetworkOutputNode = AddEncoderIfNeed(m_pTopology, transform, pMediaType.Detach(), pNetworkOutputNode.Detach(), true);
         
-        *ppTeeNode = pNetworkOutputNode.Detach();
+        //*ppTeeNode = pNetworkOutputNode.Detach();
         
         // create the topology Tee node
-        //hr = MFCreateTopologyNode(MF_TOPOLOGY_TEE_NODE, &pTeeNode);
-        //BREAK_ON_FAIL(hr);
+        hr = MFCreateTopologyNode(MF_TOPOLOGY_TEE_NODE, &pTeeNode);
+        BREAK_ON_FAIL(hr);
 
         //// connect the first Tee node output to the network sink node
-        //hr = pTeeNode->ConnectOutput(0, pNetworkOutputNode, 0);
-        //BREAK_ON_FAIL(hr);
+        hr = pTeeNode->ConnectOutput(0, pNetworkOutputNode, 0);
+        BREAK_ON_FAIL(hr);
 
-        //// if a renderer node was created and passed in, add it to the topology
-        //if(pRendererNode != NULL)
-        //{
-        //    // add the renderer node to the topology
-        //    hr = m_pTopology->AddNode(pRendererNode);
-        //    BREAK_ON_FAIL(hr);
+        // if a renderer node was created and passed in, add it to the topology
+        if(pRendererNode != NULL)
+        {
+            // add the renderer node to the topology
+            hr = m_pTopology->AddNode(pRendererNode);
+            BREAK_ON_FAIL(hr);
 
-        //    // connect the second Tee node output to the renderer sink node
-        //    hr = pTeeNode->ConnectOutput(1, pRendererNode, 0);
-        //    BREAK_ON_FAIL(hr);
-        //}
+            // connect the second Tee node output to the renderer sink node
+            hr = pTeeNode->ConnectOutput(1, pRendererNode, 0);
+            BREAK_ON_FAIL(hr);
+        }
 
-        //// detach the Tee node and return it as the output node
-        //*ppTeeNode = pTeeNode.Detach();
+        // detach the Tee node and return it as the output node
+        *ppTeeNode = pTeeNode.Detach();
     }
     while(false);
 
