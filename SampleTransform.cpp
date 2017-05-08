@@ -1,9 +1,12 @@
 #pragma once
 #include "SampleTransform.h"
 #include <mfapi.h>
-SampleTransform::SampleTransform(void) :
+SampleTransform::SampleTransform(bool startTimestampsFromZero) :
     m_cRef(1),
-    sampleCount(0),
+    m_startTimestampsFromZero(startTimestampsFromZero),
+    m_FirstSampleTimestamp(0),
+    m_FirstSampleTimestampInitialized(false),
+    m_PrevTimestamp(0),
     prevAfter(0)
 {
 }
@@ -817,71 +820,78 @@ HRESULT SampleTransform::ProcessOutput(
         return MF_E_TRANSFORM_NEED_MORE_INPUT;
     }
 
+
+
     CComPtr<IMFSample> pSample = m_pSample.Detach();
 
-    MFTIME currentSampleTime, duration;
-    hr = pSample->GetSampleTime(&currentSampleTime);
-    THROW_ON_FAIL(hr);
-    hr = pSample->GetSampleDuration(&duration);
-    THROW_ON_FAIL(hr);
-    if (sampleCount == 0) {
-        timeOffset = currentSampleTime;
+    LONGLONG sampleTimestamp, duration;
+    pSample->GetSampleDuration(&duration);
+
+    int bufferLenght = 100;
+    wchar_t charArr[100];
+
+    swprintf_s(charArr, bufferLenght, L"%llu", duration);
+    OutputDebugStringW(L"------------ Sample duration: ");
+    OutputDebugStringW(charArr);
+    OutputDebugStringW(L"\n");
+
+    swprintf_s(charArr, bufferLenght, L"%llu", m_PrevTimestamp);
+    OutputDebugStringW(L"------------ Sample previous timeStamp: ");
+    OutputDebugStringW(charArr);
+    OutputDebugStringW(L"\n");
+
+    pSample->GetSampleTime(&sampleTimestamp);
+  //  sampleTimestamp = sampleTimestamp - 853875948893;
+    pSample->SetUINT64(MFSampleExtension_DeviceTimestamp, sampleTimestamp - 853875948893);
+    swprintf_s(charArr, bufferLenght, L"%llu", sampleTimestamp);
+    OutputDebugStringW(L"------------ Sample timeStamp: ");
+    OutputDebugStringW(charArr);
+    OutputDebugStringW(L"\n");
+
+    swprintf_s(charArr, bufferLenght, L"%llu", sampleTimestamp - m_PrevTimestamp);
+    OutputDebugStringW(L"------------ Difference: ");
+    OutputDebugStringW(charArr);
+    OutputDebugStringW(L"\n\n");
+
+    if (!m_FirstSampleTimestampInitialized)
+    {
+        m_FirstSampleTimestamp = sampleTimestamp;
+        m_FirstSampleTimestampInitialized = true;
     }
-    MFTIME newValue = currentSampleTime - timeOffset;
-    //DebugLongLong(L"count: ", sampleCount);
-    //DebugLongLong(L"raw: ", currentSampleTime);
-    //DebugLongLong(L"new value: ", newValue);
-    pSample->SetSampleTime(currentSampleTime);
-    /*   CComPtr<IMFSample> reConstructedVideoSample;
-    CComPtr<IMFMediaBuffer> srcBuf = NULL;
-    CComPtr<IMFMediaBuffer> reConstructedBuffer = NULL;
-    DWORD srcBufLength;
-    byte *srcByteBuffer;
-    DWORD srcBuffCurrLen = 0;
-    DWORD srcBuffMaxLen = 0;
-    hr = pSample->ConvertToContiguousBuffer(&srcBuf);
-    THROW_ON_FAIL(hr);
-    hr = srcBuf->GetCurrentLength(&srcBufLength);
-    THROW_ON_FAIL(hr);
-    hr = srcBuf->Lock(&srcByteBuffer, &srcBuffMaxLen, &srcBuffCurrLen);
-    THROW_ON_FAIL(hr);
-    //// Now re-constuct.
-    MFCreateSample(&reConstructedVideoSample);
-    hr = MFCreateMemoryBuffer(srcBufLength, &reConstructedBuffer);
-    THROW_ON_FAIL(hr);
-    hr = reConstructedVideoSample->AddBuffer(reConstructedBuffer);
-    THROW_ON_FAIL(hr);
-    byte *reconByteBuffer;
-    DWORD reconBuffCurrLen = 0;
-    DWORD reconBuffMaxLen = 0;
-    hr = reConstructedBuffer->Lock(&reconByteBuffer, &reconBuffMaxLen, &reconBuffCurrLen);
-    THROW_ON_FAIL(hr);
-    memcpy(reconByteBuffer, srcByteBuffer, srcBuffCurrLen);
-    hr = reConstructedBuffer->Unlock();
-    THROW_ON_FAIL(hr);
-    hr = reConstructedBuffer->SetCurrentLength(srcBuffCurrLen);
-    THROW_ON_FAIL(hr);
-    hr = srcBuf->Unlock();
-    THROW_ON_FAIL(hr);
-    hr = pSample->CopyAllItems(reConstructedVideoSample);
-    THROW_ON_FAIL(hr);
-    hr = reConstructedVideoSample->SetSampleTime(newValue);
-    THROW_ON_FAIL(hr);
-    hr = reConstructedVideoSample->SetSampleDuration(duration);
-    THROW_ON_FAIL(hr);
-    //hr = reConstructedVideoSample->SetUINT64(MFSampleExtension_DecodeTimestamp, newValue);
-    THROW_ON_FAIL(hr);
-    //hr = reConstructedVideoSample->SetUINT32(MFSampleExtension_Discontinuity, 1);
-    THROW_ON_FAIL(hr);
-    //hr = reConstructedVideoSample->SetUINT32(MFSampleExtension_CleanPoint, 1);
-    THROW_ON_FAIL(hr);
-    //hr = reConstructedVideoSample->SetUINT32(MFSampleExtension_Interlaced, 1);
-    THROW_ON_FAIL(hr);
-    // hr = reConstructedVideoSample->SetUINT32(MFSampleExtension_BottomFieldFirst, 1);
-    THROW_ON_FAIL(hr);
-    //hr = reConstructedVideoSample->SetUINT32(MFSampleExtension_DeviceTimestamp, currentSampleTime);
-    THROW_ON_FAIL(hr);*/
-    sampleCount++;
+
+    //int bufferLenght = 100;
+    //wchar_t charArr[100];
+
+    //swprintf_s(charArr, bufferLenght, L"%llu", duration);
+    //OutputDebugStringW(L"------------ Sample duration: ");
+    //OutputDebugStringW(charArr);
+    //OutputDebugStringW(L"\n");
+
+    //swprintf_s(charArr, bufferLenght, L"%llu", sampleTimestamp);
+    //OutputDebugStringW(L"------------ Sample old timestamp: ");
+    //OutputDebugStringW(charArr);
+    //OutputDebugStringW(L"\n");
+
+    //swprintf_s(charArr, bufferLenght, L"%llu", sampleTimestamp + duration);
+    //OutputDebugStringW(L"------------ Sample old timestamp calculated nextTImestamp: ");
+    //OutputDebugStringW(charArr);
+    //OutputDebugStringW(L"\n");
+
+    pSample->SetSampleTime(sampleTimestamp - m_FirstSampleTimestamp);
+    m_PrevTimestamp = sampleTimestamp;
+    //swprintf_s(charArr, bufferLenght, L"%llu", m_timeOffset);
+    //OutputDebugStringW(L"------------ Sample new timestamp: ");
+    //OutputDebugStringW(charArr);
+    //OutputDebugStringW(L"\n");
+
+    //swprintf_s(charArr, bufferLenght, L"%llu", m_timeOffset + duration);
+    //OutputDebugStringW(L"------------ Sample new timestamp calculated nextTimestamp: ");
+    //OutputDebugStringW(charArr);
+    //OutputDebugStringW(L"\n\n");
+    //m_timeOffset += duration;
+
+
+   
     // Detach the output sample from the MFT and put the pointer for
     // the processed sample into the output buffer
     pOutputSampleBuffer[0].pSample = pSample;
@@ -893,9 +903,6 @@ HRESULT SampleTransform::ProcessOutput(
 
     return hr;
 }
-
-
-
 
 
 //

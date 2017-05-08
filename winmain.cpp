@@ -133,6 +133,13 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
         {
             OnOpenRemoteCamera(hwnd);
         }
+        else if (LOWORD(wParam) == ID_FILE_SEEK5SECONDS)
+        {
+            if (g_pPlayer != NULL)
+            {
+                g_pPlayer->Play();
+            }
+        }
         else if(LOWORD(wParam) == ID_CONTROL_PLAY)
         {
             if(g_pPlayer != NULL)
@@ -280,7 +287,7 @@ void OnTimer(void)
 {
     if (g_pPlayer->GetState() == PlayerState_Started)
     {
-        g_pPlayer->DrawSeekbar();
+        //g_pPlayer->DrawSeekbar();
     }
 }
 

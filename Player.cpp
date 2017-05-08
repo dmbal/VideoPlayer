@@ -336,10 +336,10 @@ HRESULT CPlayer::OpenLocalCamera(HWND renderHwnd, bool network)
 //
 HRESULT CPlayer::Play(void)
 {
-    if (m_state != PlayerState_Paused && m_state != PlayerState_Stopped)
-    {
-        return MF_E_INVALIDREQUEST;
-    }
+    //if (m_state != PlayerState_Paused && m_state != PlayerState_Stopped)
+    //{
+    //    return MF_E_INVALIDREQUEST;
+    //}
     
     if (m_pSession == NULL)
     {
@@ -638,7 +638,21 @@ HRESULT CPlayer::StartPlayback(void)
     PROPVARIANT varStart;
     PropVariantInit(&varStart);
 
-    varStart.vt = VT_EMPTY;
+    if (m_state != PlayerState_Started)
+    {
+        varStart.vt = VT_EMPTY;
+    }
+    else
+    {
+        CComPtr<IMFClock> clock;
+        m_pSession->GetClock(&clock);
+        LONGLONG clockTime, systemTime;
+        clock->GetCorrelatedTime(0, &clockTime, &systemTime);
+        
+        varStart.vt = VT_I8;
+        varStart.hVal.QuadPart = clockTime;
+    }
+
 
     // If Start fails later, we will get an MESessionStarted event with an error code, 
     // and will update our state. Passing in GUID_NULL and VT_EMPTY indicates that

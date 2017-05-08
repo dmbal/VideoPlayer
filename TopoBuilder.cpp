@@ -114,7 +114,6 @@ HRESULT CTopoBuilder::CreateASFProfile(IMFASFProfile** ppAsfProfile)
         BREAK_ON_FAIL(hr);
         hr = pPresDescriptor->GetStreamDescriptorByIndex(0, &selected, &pStreamDescriptor);
         BREAK_ON_FAIL(hr);
-
         hr = pStreamDescriptor->GetMediaTypeHandler(&pHandler);
         BREAK_ON_FAIL(hr);
 
@@ -132,7 +131,6 @@ HRESULT CTopoBuilder::CreateASFProfile(IMFASFProfile** ppAsfProfile)
 
         hr = pASFStreamConfig->SetStreamNumber(1);
         BREAK_ON_FAIL(hr);
-
         hr = pNewASFProfile->SetStream(pASFStreamConfig);
         BREAK_ON_FAIL(hr);
     } while (false);
@@ -607,7 +605,7 @@ HRESULT CTopoBuilder::AddSampleTransform(IMFMediaType* mediaType, IMFTopologyNod
         CopyVideoType(mediaType, outputMediaType);
 
         CComPtr<IMFTopologyNode> sampleTransformNode;
-        CComPtr<IMFTransform> sampleTransform = new (std::nothrow) SampleTransform();
+        CComPtr<IMFTransform> sampleTransform = new (std::nothrow) SampleTransform(true);
         //hr = sampleTransform->SetInputType(0, inputMediaType, 0);
         //THROW_ON_FAIL(hr);
         //hr = sampleTransform->SetOutputType(0, outputMediaType, 0);

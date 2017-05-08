@@ -8,7 +8,7 @@ class SampleTransform :
     public IMFTransform
 {
 public:
-    SampleTransform(void);
+    SampleTransform(bool startTimestampsFromZero);
     ~SampleTransform(void);
 
     //
@@ -75,8 +75,11 @@ private:
     MFTIME prevBefore, prevAfter;
     volatile long m_cRef;                             // ref count
     CComAutoCriticalSection m_critSec;       // critical section for the MFT
-    MFTIME timeOffset = 0;
-    int sampleCount = 0;
+    MFTIME m_timeOffset = 0;
+    bool m_startTimestampsFromZero;
+    LONGLONG m_FirstSampleTimestamp;
+    LONGLONG m_PrevTimestamp;
+    bool m_FirstSampleTimestampInitialized;
     CComPtr<IMFSample>  m_pSample;           // Input sample.
     CComPtr<IMFMediaType> m_pInputType;      // Input media type.
     CComPtr<IMFMediaType> m_pOutputType;     // Output media type.
