@@ -824,40 +824,8 @@ HRESULT SampleTransform::ProcessOutput(
 
     CComPtr<IMFSample> pSample = m_pSample.Detach();
 
-    LONGLONG sampleTimestamp, duration;
-    pSample->GetSampleDuration(&duration);
-
-    int bufferLenght = 100;
-    wchar_t charArr[100];
-
-    swprintf_s(charArr, bufferLenght, L"%llu", duration);
-    OutputDebugStringW(L"------------ Sample duration: ");
-    OutputDebugStringW(charArr);
-    OutputDebugStringW(L"\n");
-
-    swprintf_s(charArr, bufferLenght, L"%llu", m_PrevTimestamp);
-    OutputDebugStringW(L"------------ Sample previous timeStamp: ");
-    OutputDebugStringW(charArr);
-    OutputDebugStringW(L"\n");
-
-    pSample->GetSampleTime(&sampleTimestamp);
-  //  sampleTimestamp = sampleTimestamp - 853875948893;
-    pSample->SetUINT64(MFSampleExtension_DeviceTimestamp, sampleTimestamp - 853875948893);
-    swprintf_s(charArr, bufferLenght, L"%llu", sampleTimestamp);
-    OutputDebugStringW(L"------------ Sample timeStamp: ");
-    OutputDebugStringW(charArr);
-    OutputDebugStringW(L"\n");
-
-    swprintf_s(charArr, bufferLenght, L"%llu", sampleTimestamp - m_PrevTimestamp);
-    OutputDebugStringW(L"------------ Difference: ");
-    OutputDebugStringW(charArr);
-    OutputDebugStringW(L"\n\n");
-
-    if (!m_FirstSampleTimestampInitialized)
-    {
-        m_FirstSampleTimestamp = sampleTimestamp;
-        m_FirstSampleTimestampInitialized = true;
-    }
+    //LONGLONG sampleTimestamp, duration;
+    //pSample->GetSampleDuration(&duration);
 
     //int bufferLenght = 100;
     //wchar_t charArr[100];
@@ -867,28 +835,30 @@ HRESULT SampleTransform::ProcessOutput(
     //OutputDebugStringW(charArr);
     //OutputDebugStringW(L"\n");
 
+    //swprintf_s(charArr, bufferLenght, L"%llu", m_PrevTimestamp);
+    //OutputDebugStringW(L"------------ Sample previous timeStamp: ");
+    //OutputDebugStringW(charArr);
+    //OutputDebugStringW(L"\n");
+
+    //pSample->GetSampleTime(&sampleTimestamp);
     //swprintf_s(charArr, bufferLenght, L"%llu", sampleTimestamp);
-    //OutputDebugStringW(L"------------ Sample old timestamp: ");
+    //OutputDebugStringW(L"------------ Sample timeStamp: ");
     //OutputDebugStringW(charArr);
     //OutputDebugStringW(L"\n");
 
-    //swprintf_s(charArr, bufferLenght, L"%llu", sampleTimestamp + duration);
-    //OutputDebugStringW(L"------------ Sample old timestamp calculated nextTImestamp: ");
-    //OutputDebugStringW(charArr);
-    //OutputDebugStringW(L"\n");
-
-    pSample->SetSampleTime(sampleTimestamp - m_FirstSampleTimestamp);
-    m_PrevTimestamp = sampleTimestamp;
-    //swprintf_s(charArr, bufferLenght, L"%llu", m_timeOffset);
-    //OutputDebugStringW(L"------------ Sample new timestamp: ");
-    //OutputDebugStringW(charArr);
-    //OutputDebugStringW(L"\n");
-
-    //swprintf_s(charArr, bufferLenght, L"%llu", m_timeOffset + duration);
-    //OutputDebugStringW(L"------------ Sample new timestamp calculated nextTimestamp: ");
+    //swprintf_s(charArr, bufferLenght, L"%llu", sampleTimestamp - m_PrevTimestamp);
+    //OutputDebugStringW(L"------------ Difference: ");
     //OutputDebugStringW(charArr);
     //OutputDebugStringW(L"\n\n");
-    //m_timeOffset += duration;
+
+    //if (!m_FirstSampleTimestampInitialized)
+    //{
+    //    m_FirstSampleTimestamp = sampleTimestamp;
+    //    m_FirstSampleTimestampInitialized = true;
+    //}
+
+    //m_PrevTimestamp = sampleTimestamp;
+
 
 
    

@@ -42,13 +42,18 @@ BEGIN
         MENUITEM "Connect to remote camera",    ID_FILE_CONNECTTOREMOTECAMERA
         MENUITEM SEPARATOR
         MENUITEM "E&xit",                       ID_FILE_EXIT
-        MENUITEM "Seek5Seconds",                ID_FILE_SEEK5SECONDS
     END
     POPUP "&Control"
     BEGIN
         MENUITEM "&Play",                       ID_CONTROL_PLAY
         MENUITEM "P&ause",                      ID_CONTROL_PAUSE
         MENUITEM "&Stop",                       ID_CONTROL_STOP
+    END
+    POPUP "Seek"
+    BEGIN
+        MENUITEM "Seek 5 seconds forward",      ID_SEEK_SEEK5SECONDSFORWARD
+        MENUITEM "Seek to begin",               ID_SEEK_SEEKTOBEGIN
+        MENUITEM "Seek 5 seconds backward",     ID_SEEK_SEEK5SECONDSBACKWARD
     END
 END
 

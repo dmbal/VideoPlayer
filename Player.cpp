@@ -331,15 +331,42 @@ HRESULT CPlayer::OpenLocalCamera(HWND renderHwnd, bool network)
     return hr;
 }
 
+HRESULT CPlayer::Seek5SecondsForward(void)
+{
+    if (m_pSession == NULL)
+    {
+        return E_UNEXPECTED;
+    }
+    return ChangeCurrentPosition(50000000);
+}
+
+HRESULT CPlayer::Seek5SecondsBackward(void)
+{
+    if (m_pSession == NULL)
+    {
+        return E_UNEXPECTED;
+    }
+    return ChangeCurrentPosition(-50000000);
+}
+
+HRESULT CPlayer::SeekToTheBegin(void)
+{
+    if (m_pSession == NULL)
+    {
+        return E_UNEXPECTED;
+    }
+    return ChangeCurrentPosition(0);
+}
+
 //
 //  Starts playback from paused or stopped state.
 //
 HRESULT CPlayer::Play(void)
 {
-    //if (m_state != PlayerState_Paused && m_state != PlayerState_Stopped)
-    //{
-    //    return MF_E_INVALIDREQUEST;
-    //}
+    if (m_state != PlayerState_Paused && m_state != PlayerState_Stopped)
+    {
+        return MF_E_INVALIDREQUEST;
+    }
     
     if (m_pSession == NULL)
     {
@@ -627,6 +654,43 @@ HRESULT CPlayer::CloseSession(void)
     return hr;
 }
 
+//
+//  Seeks playback to the position that is shifted by specified value.
+//
+HRESULT CPlayer::ChangeCurrentPosition(LONGLONG relativePosition)
+{
+    assert(m_pSession != NULL);
+
+    PROPVARIANT varStart;
+    PropVariantInit(&varStart);
+
+    CComPtr<IMFClock> clock;
+    m_pSession->GetClock(&clock);
+    LONGLONG clockTime, systemTime;
+    clock->GetCorrelatedTime(0, &clockTime, &systemTime);
+
+    varStart.vt = VT_I8;
+    if (relativePosition == 0)
+    {
+        varStart.hVal.QuadPart = 0;
+    }
+    else
+    {
+        varStart.hVal.QuadPart = clockTime + relativePosition;
+    }
+    
+    // If Start fails later, we will get an MESessionStarted event with an error code, 
+    // and will update our state. Passing in GUID_NULL and VT_EMPTY indicates that
+    // playback should start from the current position.
+    HRESULT hr = m_pSession->Start(&GUID_NULL, &varStart);
+    if (SUCCEEDED(hr))
+    {
+        m_state = PlayerState_Started;
+    }
+
+    PropVariantClear(&varStart);
+    return hr;
+}
 
 //
 //  Starts playback from the current position.
@@ -638,21 +702,7 @@ HRESULT CPlayer::StartPlayback(void)
     PROPVARIANT varStart;
     PropVariantInit(&varStart);
 
-    if (m_state != PlayerState_Started)
-    {
-        varStart.vt = VT_EMPTY;
-    }
-    else
-    {
-        CComPtr<IMFClock> clock;
-        m_pSession->GetClock(&clock);
-        LONGLONG clockTime, systemTime;
-        clock->GetCorrelatedTime(0, &clockTime, &systemTime);
-        
-        varStart.vt = VT_I8;
-        varStart.hVal.QuadPart = clockTime;
-    }
-
+    varStart.vt = VT_EMPTY;
 
     // If Start fails later, we will get an MESessionStarted event with an error code, 
     // and will update our state. Passing in GUID_NULL and VT_EMPTY indicates that

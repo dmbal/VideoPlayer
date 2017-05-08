@@ -133,11 +133,25 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
         {
             OnOpenRemoteCamera(hwnd);
         }
-        else if (LOWORD(wParam) == ID_FILE_SEEK5SECONDS)
+        else if (LOWORD(wParam) == ID_SEEK_SEEKTOBEGIN)
         {
             if (g_pPlayer != NULL)
             {
-                g_pPlayer->Play();
+                g_pPlayer->SeekToTheBegin();
+            }
+        }
+        else if (LOWORD(wParam) == ID_SEEK_SEEK5SECONDSFORWARD)
+        {
+            if (g_pPlayer != NULL)
+            {
+                g_pPlayer->Seek5SecondsForward();
+            }
+        }
+        else if (LOWORD(wParam) == ID_SEEK_SEEK5SECONDSBACKWARD)
+        {
+            if (g_pPlayer != NULL)
+            {
+                g_pPlayer->Seek5SecondsBackward();
             }
         }
         else if(LOWORD(wParam) == ID_CONTROL_PLAY)

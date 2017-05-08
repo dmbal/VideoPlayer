@@ -39,6 +39,9 @@ class CPlayer : public IMFAsyncCallback
         HRESULT OpenURL(PCWSTR sURL, HWND renderHwnd, bool network);
         HRESULT OpenLocalCamera(HWND renderHwnd, bool network);
         HRESULT Play(void);
+        HRESULT Seek5SecondsForward(void);
+        HRESULT Seek5SecondsBackward(void);
+        HRESULT SeekToTheBegin(void);
         HRESULT Pause(void);
         HRESULT Stop(void);
         PlayerState   GetState() const { return m_state; }
@@ -80,6 +83,7 @@ class CPlayer : public IMFAsyncCallback
         HRESULT CreateSession(void);
         HRESULT CloseSession(void);
         HRESULT StartPlayback(void);
+        HRESULT ChangeCurrentPosition(LONGLONG relativePosition);
 
         HRESULT InitializeMixer(void);
         HRESULT InitializeSeekbarDirectX(void);
