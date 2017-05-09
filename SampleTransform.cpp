@@ -824,7 +824,7 @@ HRESULT SampleTransform::ProcessOutput(
 
     CComPtr<IMFSample> pSample = m_pSample.Detach();
 
-    //LONGLONG sampleTimestamp, duration;
+    LONGLONG sampleTimestamp, duration;
     //pSample->GetSampleDuration(&duration);
 
     //int bufferLenght = 100;
@@ -840,7 +840,7 @@ HRESULT SampleTransform::ProcessOutput(
     //OutputDebugStringW(charArr);
     //OutputDebugStringW(L"\n");
 
-    //pSample->GetSampleTime(&sampleTimestamp);
+    pSample->GetSampleTime(&sampleTimestamp);
     //swprintf_s(charArr, bufferLenght, L"%llu", sampleTimestamp);
     //OutputDebugStringW(L"------------ Sample timeStamp: ");
     //OutputDebugStringW(charArr);
@@ -851,12 +851,13 @@ HRESULT SampleTransform::ProcessOutput(
     //OutputDebugStringW(charArr);
     //OutputDebugStringW(L"\n\n");
 
-    //if (!m_FirstSampleTimestampInitialized)
-    //{
-    //    m_FirstSampleTimestamp = sampleTimestamp;
-    //    m_FirstSampleTimestampInitialized = true;
-    //}
+    if (!m_FirstSampleTimestampInitialized)
+    {
+        m_FirstSampleTimestamp = sampleTimestamp;
+        m_FirstSampleTimestampInitialized = true;
+    }
 
+    pSample->SetSampleTime(sampleTimestamp - m_FirstSampleTimestamp);
     //m_PrevTimestamp = sampleTimestamp;
 
 

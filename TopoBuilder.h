@@ -27,7 +27,8 @@ class CTopoBuilder
         IMFTopology* GetTopology(void) { return m_pTopology; }
 
         HRESULT ShutdownSource(void);
-
+        CComQIPtr<IMFTopologyNode>                  m_pSourceNode;
+        
     private:
         CComQIPtr<IMFTopology>                  m_pTopology;     // the topology itself
         CComQIPtr<IMFMediaSource>               m_pSource;       // the MF source

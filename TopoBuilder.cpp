@@ -377,7 +377,7 @@ HRESULT CTopoBuilder::AddBranchToPartialTopology(
             // Create a source node for this stream.
             hr = CreateSourceStreamNode(pPresDescriptor, pStreamDescriptor, pSourceNode);
             BREAK_ON_FAIL(hr);
-
+            m_pSourceNode = pSourceNode;
             // Create the output node for the renderer.
             hr = CreateOutputNode(pStreamDescriptor, m_videoHwnd, pSourceNode, &pOutputNode);
             BREAK_ON_FAIL(hr);

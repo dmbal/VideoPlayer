@@ -659,6 +659,7 @@ HRESULT CPlayer::CloseSession(void)
 //
 HRESULT CPlayer::ChangeCurrentPosition(LONGLONG relativePosition)
 {
+    UnwrapPartialTopo(m_topoBuilder.m_pSourceNode, 0);
     assert(m_pSession != NULL);
 
     PROPVARIANT varStart;
