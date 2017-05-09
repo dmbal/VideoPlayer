@@ -47,6 +47,7 @@ class CTopoBuilder
         HRESULT CreateTopology(void);
 
         HRESULT CreateASFProfile(IMFASFProfile** ppAsfProfile);
+        HRESULT CreateMediaTypeForAsfProfile(IMFMediaType** ppMediaType);
         HRESULT AddBranchToPartialTopology(
             CComPtr<IMFPresentationDescriptor> pPresDescriptor, 
             DWORD iStream);

@@ -91,6 +91,37 @@ HRESULT CTopoBuilder::RenderCamera(TopologySettings topoSettings)
 
     return hr;
 }
+HRESULT CTopoBuilder::CreateMediaTypeForAsfProfile(IMFMediaType** ppMediaType)
+{
+    HRESULT hr = S_OK;
+    CComPtr<IMFMediaType> pMediaType;
+    if (m_topoSettings.addH264Encoder)
+    {
+
+    }
+    else if (m_topoSettings.addWMWEncoder)
+    {
+
+    }
+    else // Raw mediatype
+    {
+        CComPtr<IMFPresentationDescriptor> pPresDescriptor;
+        CComPtr<IMFStreamDescriptor> pStreamDescriptor;
+        CComPtr<IMFMediaTypeHandler> pHandler = NULL;
+
+        BOOL selected;
+        // create the presentation descriptor for the source
+        hr = m_pSource->CreatePresentationDescriptor(&pPresDescriptor);
+        BREAK_ON_FAIL(hr);
+        hr = pPresDescriptor->GetStreamDescriptorByIndex(0, &selected, &pStreamDescriptor);
+        BREAK_ON_FAIL(hr);
+        hr = pStreamDescriptor->GetMediaTypeHandler(&pHandler);
+        BREAK_ON_FAIL(hr);
+        hr = pHandler->GetCurrentMediaType(&pMediaType);
+        BREAK_ON_FAIL(hr);
+        *ppMediaType = pMediaType.Detach();
+    }
+}
 
 HRESULT CTopoBuilder::CreateASFProfile(IMFASFProfile** ppAsfProfile)
 {
@@ -102,24 +133,13 @@ HRESULT CTopoBuilder::CreateASFProfile(IMFASFProfile** ppAsfProfile)
     //BREAK_ON_FAIL(hr);
 
     HRESULT hr = S_OK;
-    CComPtr<IMFMediaTypeHandler> pHandler = NULL;
-    CComPtr<IMFStreamDescriptor> pStreamDescriptor;
+    
     CComPtr<IMFMediaType> pMediaType;
     CComPtr<IMFASFProfile> pNewASFProfile;
     CComPtr<IMFASFStreamConfig> pASFStreamConfig;
-    CComPtr<IMFPresentationDescriptor> pPresDescriptor;
-    BOOL selected;
     do
     {
-        // create the presentation descriptor for the source
-        hr = m_pSource->CreatePresentationDescriptor(&pPresDescriptor);
-        BREAK_ON_FAIL(hr);
-        hr = pPresDescriptor->GetStreamDescriptorByIndex(0, &selected, &pStreamDescriptor);
-        BREAK_ON_FAIL(hr);
-        hr = pStreamDescriptor->GetMediaTypeHandler(&pHandler);
-        BREAK_ON_FAIL(hr);
-
-        hr = pHandler->GetCurrentMediaType(&pMediaType);
+        hr = CreateMediaTypeForAsfProfile(&pMediaType);
         BREAK_ON_FAIL(hr);
 
         hr = MFCreateASFProfile(&pNewASFProfile);
