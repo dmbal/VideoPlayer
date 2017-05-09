@@ -140,7 +140,9 @@ HRESULT CTopoBuilder::CreateMediaTypeForAsfProfile(IMFMediaType** ppMediaType)
     }
     else if (m_topoSettings.addWMWEncoder)
     {
-
+        CComPtr<IMFMediaType> wmwEncoderType = CreateMediaType(MFMediaType_Video, MFVideoFormat_WMV3);
+        CopyVideoType(sourceMediaType, wmwEncoderType);
+        *ppMediaType = wmwEncoderType.Detach();
     }
     else // Raw mediatype
     {
@@ -727,6 +729,36 @@ HRESULT CTopoBuilder::CreateTeeNetworkTwig(IMFMediaType* pSourceMediaType,
 
             AddOldOutputToTopo(m_pTopology, color, transformNode, &colorConverterNode);
             pOutputNode = colorConverterNode.Detach();
+        }
+        else if (m_topoSettings.addWMWEncoder)
+        {
+            CComPtr<IMFMediaType> asfMediaType;
+            CreateMediaTypeForAsfProfile(&asfMediaType);
+            CComPtr<IMFASFContentInfo> pAsfContentInfo;
+            hr = MFCreateASFContentInfo(&pAsfContentInfo);
+            CComPtr<IPropertyStore> store;
+            pAsfContentInfo->GetEncodingConfigurationPropertyStore(0, &store);
+            CComPtr<IMFActivate> pEncoderActivate;
+            hr = MFCreateWMVEncoderActivate(asfMediaType, store, &pEncoderActivate);
+
+            CComPtr<IMFTopologyNode> asfEncoderNode;
+            hr = MFCreateTopologyNode(MF_TOPOLOGY_TRANSFORM_NODE, &asfEncoderNode);
+            BREAK_ON_FAIL(hr);
+
+            hr = asfEncoderNode->SetObject(pEncoderActivate);
+            CComPtr<IMFTopologyNode> pOldOutput = pOutputNode;
+
+            hr = asfEncoderNode->SetObject(pEncoderActivate);
+            THROW_ON_FAIL(hr);
+
+            hr = asfEncoderNode->SetUINT32(MF_TOPONODE_STREAMID, 0);
+            THROW_ON_FAIL(hr);
+
+            hr = asfEncoderNode->ConnectOutput(0, pOldOutput, 0);
+            m_pTopology->AddNode(pOldOutput);
+            THROW_ON_FAIL(hr);
+
+            pOutputNode = asfEncoderNode;
         }
         else
         {

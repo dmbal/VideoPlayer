@@ -39,10 +39,11 @@ BEGIN
     POPUP "Camera"
     BEGIN
         MENUITEM "Render",                      ID_CAMERA_RENDER
-        MENUITEM "Streaming",                   ID_CAMERA_STREAMING
+        MENUITEM "Network (Raw)",               ID_CAMERA_STREAMING
         MENUITEM "Encoding and render (not impl)", ID_CAMERA_ENCODING_AND_RENDERING
-        MENUITEM "Network and Render (without ST)", ID_CAMERA_STREAMING_AND_RENDER
+        MENUITEM "Network and Render (Raw)", ID_CAMERA_STREAMING_AND_RENDER
         MENUITEM "Network and Render using H264", ID_CAMERA_STREAMING_AND_RENDER_USINGH264
+        MENUITEM "Network and Render using wmv3", ID_CAMERA_NETWORK_AND_RENDER_USINGWMV3
         MENUITEM SEPARATOR
         MENUITEM "Connect to remote camera (use ST)", ID_CAMERA_CONNECT_ST
         MENUITEM "Connect to remote camera (without ST)", ID_CAMERA_CONNECT
