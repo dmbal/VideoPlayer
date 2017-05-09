@@ -524,6 +524,18 @@ HRESULT CPlayer::Repaint(void)
 //
 HRESULT CPlayer::OnTopologyReady(void)
 {
+    CComPtr<IMFTopology> topo;
+    WORD itemsCount;
+    HRESULT hr1 = m_pSession->GetFullTopology(
+        MFSESSION_GETFULLTOPOLOGY_CURRENT,
+        0,
+        &topo);
+
+    topo->GetNodeCount(&itemsCount);
+    CComPtr<IMFTopologyNode> topoNode;
+    topo->GetNode(0, &topoNode);
+    UnwrapPartialTopo(topoNode, 0);
+
     HRESULT hr = S_OK;
     
     // release any previous instance of the m_pVideoDisplay interface
@@ -541,6 +553,7 @@ HRESULT CPlayer::OnTopologyReady(void)
 
     m_pPresentationClock = NULL;
     m_pSession->GetClock(&m_pPresentationClock);
+
 
     //DetermineDuration();
     //DrawSeekbar();
@@ -659,7 +672,6 @@ HRESULT CPlayer::CloseSession(void)
 //
 HRESULT CPlayer::ChangeCurrentPosition(LONGLONG relativePosition)
 {
-    UnwrapPartialTopo(m_topoBuilder.m_pSourceNode, 0);
     assert(m_pSession != NULL);
 
     PROPVARIANT varStart;

@@ -367,6 +367,6 @@ void OnOpenRemoteCamera(HWND parent)
     // call the player to actually open the camera and build the topology
     if (g_pPlayer != NULL)
     {
-        g_pPlayer->OpenURL(L"http://10.38.10.108:8080", parent, false);
+        g_pPlayer->OpenURL(L"http://localhost:8080", parent, false);
     }
 }

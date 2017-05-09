@@ -584,7 +584,6 @@ HRESULT CTopoBuilder::CreateOutputNode(
             hr = CreateTeeNetworkTwig(pStreamDescriptor, pOldOutput, &pOutputNode);
             BREAK_ON_FAIL(hr);
         }
-        UnwrapPartialTopo(pOutputNode, 0);
         *ppOutputNode = pOutputNode.Detach();
     }
     while(false);
