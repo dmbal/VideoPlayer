@@ -30,7 +30,7 @@ HRESULT CopyAttribute(IMFAttributes *pSrc, IMFAttributes *pDest, const GUID& key
     return hr;
 }
 
-HRESULT CopyVideoType(IMFMediaType * in_media_type, IMFMediaType * out_mf_media_type) {
+HRESULT CopyVideoType(IMFMediaType * sourceMediaType, IMFMediaType * destMediaType) {
     UINT32 frameRate = 0;
     UINT32 frameRateDenominator;
     UINT32 aspectRatio = 0;
@@ -40,53 +40,53 @@ HRESULT CopyVideoType(IMFMediaType * in_media_type, IMFMediaType * out_mf_media_
 
     //in_media_type->CopyAllItems(out_mf_media_type);
 
-    if (SUCCEEDED(in_media_type->GetUINT32(MF_MT_AVG_BITRATE, &bitrate)))
+    if (SUCCEEDED(sourceMediaType->GetUINT32(MF_MT_AVG_BITRATE, &bitrate)))
     {
-        out_mf_media_type->SetUINT32(MF_MT_AVG_BITRATE, bitrate);
+        destMediaType->SetUINT32(MF_MT_AVG_BITRATE, bitrate);
     }
-    hr = MFGetAttributeRatio(in_media_type, MF_MT_FRAME_SIZE, &width, &height);
+    hr = MFGetAttributeRatio(sourceMediaType, MF_MT_FRAME_SIZE, &width, &height);
     THROW_ON_FAIL(hr);
-    hr = MFGetAttributeRatio(in_media_type, MF_MT_FRAME_RATE, &frameRate, &frameRateDenominator);
+    hr = MFGetAttributeRatio(sourceMediaType, MF_MT_FRAME_RATE, &frameRate, &frameRateDenominator);
     THROW_ON_FAIL(hr);
-    hr = MFGetAttributeRatio(in_media_type, MF_MT_PIXEL_ASPECT_RATIO, &aspectRatio, &denominator);
+    hr = MFGetAttributeRatio(sourceMediaType, MF_MT_PIXEL_ASPECT_RATIO, &aspectRatio, &denominator);
     THROW_ON_FAIL(hr);
-    hr = MFSetAttributeRatio(out_mf_media_type, MF_MT_FRAME_SIZE, width, height);
+    hr = MFSetAttributeRatio(destMediaType, MF_MT_FRAME_SIZE, width, height);
     THROW_ON_FAIL(hr);
-    hr = MFSetAttributeRatio(out_mf_media_type, MF_MT_FRAME_RATE, frameRate, frameRateDenominator);
+    hr = MFSetAttributeRatio(destMediaType, MF_MT_FRAME_RATE, frameRate, frameRateDenominator);
     THROW_ON_FAIL(hr);
-    hr = MFSetAttributeRatio(out_mf_media_type, MF_MT_PIXEL_ASPECT_RATIO, aspectRatio, denominator);
+    hr = MFSetAttributeRatio(destMediaType, MF_MT_PIXEL_ASPECT_RATIO, aspectRatio, denominator);
     THROW_ON_FAIL(hr);
-    hr = CopyAttribute(in_media_type, out_mf_media_type, MF_MT_INTERLACE_MODE);
+    hr = CopyAttribute(sourceMediaType, destMediaType, MF_MT_INTERLACE_MODE);
     THROW_ON_FAIL(hr);
     return hr;
 }
 
-HRESULT CopyAudioType(IMFMediaType * in_media_type, IMFMediaType * out_mf_media_type) {
+HRESULT CopyAudioType(IMFMediaType * sourceMediaType, IMFMediaType * destMediaType) {
     HRESULT hr = S_OK;
-    hr = CopyAttribute(in_media_type, out_mf_media_type, MF_MT_AUDIO_NUM_CHANNELS);
+    hr = CopyAttribute(sourceMediaType, destMediaType, MF_MT_AUDIO_NUM_CHANNELS);
     THROW_ON_FAIL(hr);
-    hr = CopyAttribute(in_media_type, out_mf_media_type, MF_MT_AUDIO_SAMPLES_PER_SECOND);
+    hr = CopyAttribute(sourceMediaType, destMediaType, MF_MT_AUDIO_SAMPLES_PER_SECOND);
     THROW_ON_FAIL(hr);
-    hr = CopyAttribute(in_media_type, out_mf_media_type, MF_MT_AUDIO_BLOCK_ALIGNMENT);
+    hr = CopyAttribute(sourceMediaType, destMediaType, MF_MT_AUDIO_BLOCK_ALIGNMENT);
     THROW_ON_FAIL(hr);
-    hr = CopyAttribute(in_media_type, out_mf_media_type, MF_MT_AUDIO_AVG_BYTES_PER_SECOND);
+    hr = CopyAttribute(sourceMediaType, destMediaType, MF_MT_AUDIO_AVG_BYTES_PER_SECOND);
     THROW_ON_FAIL(hr);
-    hr = CopyAttribute(in_media_type, out_mf_media_type, MF_MT_AVG_BITRATE);
+    hr = CopyAttribute(sourceMediaType, destMediaType, MF_MT_AVG_BITRATE);
     THROW_ON_FAIL(hr);
     return hr;
 }
 
-HRESULT CopyType(IMFMediaType * in_media_type, IMFMediaType * out_mf_media_type) {
-    GUID major = GetMajorType(in_media_type);
+HRESULT CopyType(IMFMediaType * sourceMediaType, IMFMediaType * destMediaType) {
+    GUID major = GetMajorType(sourceMediaType);
     HRESULT hr = S_OK;
 
     if (major == MFMediaType_Audio)
     {
-        hr = CopyAudioType(in_media_type, out_mf_media_type);
+        hr = CopyAudioType(sourceMediaType, destMediaType);
     }
     else if (major == MFMediaType_Video)
     {
-        hr = CopyVideoType(in_media_type, out_mf_media_type);
+        hr = CopyVideoType(sourceMediaType, destMediaType);
     }
     else
     {

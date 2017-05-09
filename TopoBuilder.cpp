@@ -94,10 +94,28 @@ HRESULT CTopoBuilder::RenderCamera(TopologySettings topoSettings)
 HRESULT CTopoBuilder::CreateMediaTypeForAsfProfile(IMFMediaType** ppMediaType)
 {
     HRESULT hr = S_OK;
-    CComPtr<IMFMediaType> pMediaType;
+    CComPtr<IMFMediaType> sourceMediaType;
+    CComPtr<IMFPresentationDescriptor> pPresDescriptor;
+    CComPtr<IMFStreamDescriptor> pStreamDescriptor;
+    CComPtr<IMFMediaTypeHandler> pHandler = NULL;
+
+    BOOL selected;
+    // create the presentation descriptor for the source
+    hr = m_pSource->CreatePresentationDescriptor(&pPresDescriptor);
+    BREAK_ON_FAIL(hr);
+    hr = pPresDescriptor->GetStreamDescriptorByIndex(0, &selected, &pStreamDescriptor);
+    BREAK_ON_FAIL(hr);
+    hr = pStreamDescriptor->GetMediaTypeHandler(&pHandler);
+    BREAK_ON_FAIL(hr);
+    hr = pHandler->GetCurrentMediaType(&sourceMediaType);
+    BREAK_ON_FAIL(hr);
+
+    
     if (m_topoSettings.addH264Encoder)
     {
-
+        CComPtr<IMFMediaType> h264MediaType = CreateMediaType(MFMediaType_Video, MFVideoFormat_H264);
+        CopyVideoType(sourceMediaType, h264MediaType);
+        *ppMediaType = h264MediaType.Detach();
     }
     else if (m_topoSettings.addWMWEncoder)
     {
@@ -105,21 +123,7 @@ HRESULT CTopoBuilder::CreateMediaTypeForAsfProfile(IMFMediaType** ppMediaType)
     }
     else // Raw mediatype
     {
-        CComPtr<IMFPresentationDescriptor> pPresDescriptor;
-        CComPtr<IMFStreamDescriptor> pStreamDescriptor;
-        CComPtr<IMFMediaTypeHandler> pHandler = NULL;
-
-        BOOL selected;
-        // create the presentation descriptor for the source
-        hr = m_pSource->CreatePresentationDescriptor(&pPresDescriptor);
-        BREAK_ON_FAIL(hr);
-        hr = pPresDescriptor->GetStreamDescriptorByIndex(0, &selected, &pStreamDescriptor);
-        BREAK_ON_FAIL(hr);
-        hr = pStreamDescriptor->GetMediaTypeHandler(&pHandler);
-        BREAK_ON_FAIL(hr);
-        hr = pHandler->GetCurrentMediaType(&pMediaType);
-        BREAK_ON_FAIL(hr);
-        *ppMediaType = pMediaType.Detach();
+        *ppMediaType = sourceMediaType.Detach();
     }
 }
 
