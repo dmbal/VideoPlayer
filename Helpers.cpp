@@ -1,6 +1,7 @@
 #include "Helpers.h"
 #include <array>
 #include <map>
+#include "SampleTransform.h"
 
 GUID GetSubtype(IMFMediaType * mediaType) {
     GUID minorType;
@@ -287,6 +288,12 @@ HRESULT HandleNodeObject(IMFTopologyNode * node) {
         CComPtr<IMFTransform> transform;
         unknown->QueryInterface(IID_PPV_ARGS(&transform));
         if (transform != NULL) {
+            CComPtr<SampleTransform> sampleTrasform;
+            unknown->QueryInterface(IID_PPV_ARGS(&sampleTrasform));
+            if (sampleTrasform != NULL)
+            {
+                DebugInfo(L"(type is SampleTransform) ");
+            }
             CComPtr<IMFMediaType> inputType;
             hr = transform->GetInputCurrentType(0, &inputType);
             if (SUCCEEDED(hr)) {

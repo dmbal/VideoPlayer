@@ -1,6 +1,7 @@
 #pragma once
 #include "SampleTransform.h"
 #include <mfapi.h>
+
 SampleTransform::SampleTransform(bool startTimestampsFromZero) :
     m_cRef(1),
     m_startTimestampsFromZero(startTimestampsFromZero),
@@ -55,6 +56,10 @@ HRESULT SampleTransform::QueryInterface(REFIID riid, void** ppv)
     else if (riid == IID_IMFTransform)
     {
         *ppv = static_cast<IMFTransform*>(this);
+    }
+    else if (riid == IID_SampleTransform)
+    {
+        *ppv = this;
     }
     else
     {

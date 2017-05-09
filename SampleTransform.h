@@ -4,6 +4,13 @@
 #include <mfapi.h>
 #include "mftransform.h"
 #include <MMSystem.h>
+
+// {88ACF5E6-2ED1-4780-87B1-D71814C2D42A}
+DEFINE_GUID(IID_SampleTransform, 0x33acf5e6, 0x2ed1, 0x4780, 0x87, 0xb1, 0xd7, 0x18, 0x14, 0xc2,
+    0xd4, 0x2a);
+// Microsoft-specific extension necessary to support the __uuidof(IAsyncState) notation.
+class __declspec(uuid("33ACF5E6-2ED1-4780-87B1-D71814C2D42A")) SampleTransform;
+
 class SampleTransform :
     public IMFTransform
 {
