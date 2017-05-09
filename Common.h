@@ -6,6 +6,7 @@
 #include <atlbase.h>
 #include <uuids.h>
 #include "Helpers.h"
+#include "TopologySettings.h"
 #include <comdef.h>
 
 using namespace std;

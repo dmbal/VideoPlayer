@@ -21,8 +21,8 @@ class CTopoBuilder
         CTopoBuilder(void)  { m_addRenderers = false; m_addNetworkSink = false; };
         ~CTopoBuilder(void) { ShutdownSource(); };
 
-        HRESULT RenderURL(PCWSTR fileUrl, HWND videoHwnd, bool addNetwork);
-        HRESULT RenderCamera(HWND videoHwnd, bool addNetwork);
+        HRESULT RenderURL(PCWSTR fileUrl, TopologySettings topoSettings);
+        HRESULT RenderCamera(TopologySettings topoSettings);
 
         IMFTopology* GetTopology(void) { return m_pTopology; }
 
@@ -34,7 +34,7 @@ class CTopoBuilder
         CComQIPtr<IMFMediaSource>               m_pSource;       // the MF source
         CComQIPtr<IMFVideoDisplayControl>       m_pVideoDisplay; // pointer to the mixer
         HWND                                    m_videoHwnd;     // the target window
-
+        TopologySettings m_topoSettings;
         CComPtr<IMFActivate> m_pNetworkSinkActivate;
         DWORD m_nextNetworkSinkStreamIndex;
 

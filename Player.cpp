@@ -207,7 +207,7 @@ ULONG CPlayer::Release(void)
 // OpenFileURL is the main initialization function that triggers bulding of the core
 // MF components.
 //
-HRESULT CPlayer::OpenURL(PCWSTR sURL, HWND renderHwnd, bool network)
+HRESULT CPlayer::OpenURL(PCWSTR sURL, TopologySettings topoSettings)
 {
     CComPtr<IMFTopology> pTopology = NULL;
     HRESULT hr = S_OK;
@@ -222,21 +222,12 @@ HRESULT CPlayer::OpenURL(PCWSTR sURL, HWND renderHwnd, bool network)
             BREAK_ON_FAIL(hr);
         }
 
-        m_hwndVideo = renderHwnd;
+        m_hwndVideo = topoSettings.hWnd;
 
         // Step 2: build the topology.  Here we are using the TopoBuilder helper class.
-        if (renderHwnd != NULL && network)
-        {
-            hr = m_topoBuilder.RenderURL(sURL, m_hwndVideo, true);
-        }
-        else if (renderHwnd != NULL && !network)
-        {
-            hr = m_topoBuilder.RenderURL(sURL, m_hwndVideo, false);
-        }
-        else if (renderHwnd == NULL && network)
-        {
-            hr = m_topoBuilder.RenderURL(sURL, NULL, true);
-        }
+
+        hr = m_topoBuilder.RenderURL(sURL, topoSettings);
+
         BREAK_ON_FAIL(hr);
 
 
@@ -270,7 +261,7 @@ HRESULT CPlayer::OpenURL(PCWSTR sURL, HWND renderHwnd, bool network)
 }
 
 
-HRESULT CPlayer::OpenLocalCamera(HWND renderHwnd, bool network)
+HRESULT CPlayer::OpenLocalCamera(TopologySettings topoSettings)
 {
     CComPtr<IMFTopology> pTopology = NULL;
     HRESULT hr = S_OK;
@@ -285,21 +276,12 @@ HRESULT CPlayer::OpenLocalCamera(HWND renderHwnd, bool network)
             BREAK_ON_FAIL(hr);
         }
 
-        m_hwndVideo = renderHwnd;
+        m_hwndVideo = topoSettings.hWnd;
 
         // Step 2: build the topology.  Here we are using the TopoBuilder helper class.
-        if (renderHwnd != NULL && network)
-        {
-            hr = m_topoBuilder.RenderCamera(m_hwndVideo, true);
-        }
-        else if (renderHwnd != NULL && !network)
-        {
-            hr = m_topoBuilder.RenderCamera(m_hwndVideo, false);
-        }
-        else if (renderHwnd == NULL && network)
-        {
-            hr = m_topoBuilder.RenderCamera(NULL, true);
-        }
+
+        hr = m_topoBuilder.RenderCamera(topoSettings);
+ 
         BREAK_ON_FAIL(hr);
 
 

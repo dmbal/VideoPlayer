@@ -20,17 +20,18 @@ IMFTransform* CreateColorConverterMFT()
 // Initiates topology building from the file URL by first creating a media source, and then
 // adding source and sink nodes for every stream found in the file.
 //
-HRESULT CTopoBuilder::RenderURL(PCWSTR fileUrl, HWND videoHwnd, bool addNetwork)
+HRESULT CTopoBuilder::RenderURL(PCWSTR fileUrl, TopologySettings topoSettings)
 {
     HRESULT hr = S_OK;
 
     do
     {
-        m_videoHwnd = videoHwnd;
+        m_topoSettings = topoSettings;
+        m_videoHwnd = topoSettings.hWnd;
 
         // The topology can have either a rendering sink (when videoHwnd is not NULL), a 
         // network sink, or both.
-        if(videoHwnd == NULL && !addNetwork)
+        if(m_videoHwnd == NULL && !topoSettings.addNetwork)
         {
             hr = E_INVALIDARG;
             break;
@@ -42,7 +43,7 @@ HRESULT CTopoBuilder::RenderURL(PCWSTR fileUrl, HWND videoHwnd, bool addNetwork)
         BREAK_ON_FAIL(hr);
 
         // add a network sink if one was requested
-        if(addNetwork)
+        if(topoSettings.addNetwork)
         {
             hr = CreateNetworkSink(8080);
             BREAK_ON_FAIL(hr);
@@ -56,16 +57,17 @@ HRESULT CTopoBuilder::RenderURL(PCWSTR fileUrl, HWND videoHwnd, bool addNetwork)
     return hr;
 }
 
-HRESULT CTopoBuilder::RenderCamera(HWND videoHwnd, bool addNetwork)
+HRESULT CTopoBuilder::RenderCamera(TopologySettings topoSettings)
 {
     HRESULT hr = S_OK;
 
     do
     {
-        m_videoHwnd = videoHwnd;
+        m_topoSettings = topoSettings;
+        m_videoHwnd = topoSettings.hWnd;
         // The topology can have either a rendering sink (when videoHwnd is not NULL), a 
         // network sink, or both.
-        if (videoHwnd == NULL && !addNetwork)
+        if (m_videoHwnd == NULL && !topoSettings.addNetwork)
         {
             hr = E_INVALIDARG;
             break;
@@ -77,7 +79,7 @@ HRESULT CTopoBuilder::RenderCamera(HWND videoHwnd, bool addNetwork)
         BREAK_ON_FAIL(hr);
 
         // add a network sink if one was requested
-        if (addNetwork)
+        if (topoSettings.addNetwork)
         {
             hr = CreateNetworkSink(8080);
             BREAK_ON_FAIL(hr);
@@ -564,18 +566,21 @@ HRESULT CTopoBuilder::CreateOutputNode(
         hr = pHandler->GetCurrentMediaType(&pCurrentMediaType);
         BREAK_ON_FAIL(hr);
 
-        CComPtr<IMFTopologyNode> pOldOutput = pOutputNode;
-        pOutputNode = NULL;
-        hr = AddSampleTransform(pCurrentMediaType, pOldOutput, &pOutputNode);
-        BREAK_ON_FAIL(hr);
+        if (m_topoSettings.addSampleTransform)
+        {
+            CComPtr<IMFTopologyNode> pOldOutput = pOutputNode;
+            pOutputNode = NULL;
+            hr = AddSampleTransform(pCurrentMediaType, pOldOutput, &pOutputNode);
+            BREAK_ON_FAIL(hr);
 
-        pOldOutput = pOutputNode;
-        pOutputNode = NULL;
-        CComPtr<IMFTransform> color = CreateColorConverterMFT();
-        CComPtr<IMFTopologyNode> colorConverterNode;
-        hr = AddOldOutputToTopo(m_pTopology, color, pOldOutput, &colorConverterNode);
-        THROW_ON_FAIL(hr);
-        pOutputNode = colorConverterNode.Detach();
+            pOldOutput = pOutputNode;
+            pOutputNode = NULL;
+            CComPtr<IMFTransform> color = CreateColorConverterMFT();
+            CComPtr<IMFTopologyNode> colorConverterNode;
+            hr = AddOldOutputToTopo(m_pTopology, color, pOldOutput, &colorConverterNode);
+            THROW_ON_FAIL(hr);
+            pOutputNode = colorConverterNode.Detach();
+        }
 
         if(m_pNetworkSinkActivate != NULL)
         {

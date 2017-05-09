@@ -34,14 +34,18 @@ BEGIN
         MENUITEM "O&pen File for Network Streaming", ID_FILE_OPENFILEFORNETWORKSTREAMING
         MENUITEM "Open File for Network and Render", ID_FILE_OPENFILEFORNETWORKANDRENDER
         MENUITEM SEPARATOR
-        MENUITEM "Open Camera for render",      ID_FILE_OPENCAMERAFORRENDER
-        MENUITEM "Open Camera for network streaming", ID_FILE_OPENCAMERAFORNETWORKANDSTREAMING
-        MENUITEM "Open Camera for Encoding and Rendering", ID_FILE_OPENCAMERAFORENCODINGANDRENDERING
-        MENUITEM "Open Camera for Network and Render", ID_FILE_OPENCAMERAFORNETWORKANDRENDER
         MENUITEM SEPARATOR
-        MENUITEM "Connect to remote camera",    ID_FILE_CONNECTTOREMOTECAMERA
         MENUITEM SEPARATOR
         MENUITEM "E&xit",                       ID_FILE_EXIT
+    END
+    POPUP "Camera"
+    BEGIN
+        MENUITEM "Render",                      ID_CAMERA_RENDER
+        MENUITEM "Streaming",                   ID_CAMERA_STREAMING
+        MENUITEM "Encoding and render (not impl)", ID_CAMERA_ENCODING_AND_RENDERING
+        MENUITEM "Network and Render (without ST)", ID_CAMERA_STREAMING_AND_RENDER
+        MENUITEM "Connect to remote camera (use ST)", ID_CAMERA_CONNECT_ST
+        MENUITEM "Connect to remote camera (without ST)", ID_CAMERA_CONNECT
     END
     POPUP "&Control"
     BEGIN
@@ -92,7 +96,6 @@ END
 //
 
 IDC_POINTER             CURSOR                  "arrow.cur"
-
 #endif    // English (United States) resources
 /////////////////////////////////////////////////////////////////////////////
 

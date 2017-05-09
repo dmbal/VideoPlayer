@@ -238,6 +238,7 @@
     <ClInclude Include="resource.h" />
     <ClInclude Include="SampleTransform.h" />
     <ClInclude Include="TopoBuilder.h" />
+    <ClInclude Include="TopologySettings.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="AdvancedPlayer.rc" />

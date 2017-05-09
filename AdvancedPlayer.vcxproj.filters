@@ -54,6 +54,9 @@
     <ClInclude Include="SampleTransform.h">
       <Filter>Header files</Filter>
     </ClInclude>
+    <ClInclude Include="TopologySettings.h">
+      <Filter>Header files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Header files">

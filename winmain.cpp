@@ -23,9 +23,9 @@ LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
 LRESULT             OnCreateWindow(HWND hwnd);
 void                OnPaint(HWND hwnd);
 void                OnKeyPress(WPARAM key);
-void                OnOpenFile(HWND parent, bool render, bool network);
-void                OnOpenCamera(HWND parent, bool render, bool network);
-void                OnOpenRemoteCamera(HWND parent);
+void                OnOpenFile(TopologySettings topoSettings);
+void                OnOpenCamera(TopologySettings topoSettings);
+void                OnOpenRemoteCamera(TopologySettings topoSettings);
 void OnTimer(void);
 
 
@@ -94,7 +94,7 @@ BOOL CreateApplicationWindow(HINSTANCE hInst, int nCmdShow)
 LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     HRESULT hr = S_OK;
-
+    TopologySettings topoSettings;
     switch (message)
     {
     case WM_CREATE:
@@ -107,31 +107,51 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
         }
         else if(LOWORD(wParam) == ID_FILE_OPENFILE)
         {
-            OnOpenFile(hwnd, true, false);
+            topoSettings.hWnd = hwnd;
+            OnOpenFile(topoSettings);
         }
         else if(LOWORD(wParam) == ID_FILE_OPENFILEFORNETWORKSTREAMING)
         {
-            OnOpenFile(hwnd, false, true);
+            topoSettings.hWnd = NULL;
+            topoSettings.addNetwork = true;
+            OnOpenFile(topoSettings);
         }
         else if(LOWORD(wParam) == ID_FILE_OPENFILEFORNETWORKANDRENDER)
         {
-            OnOpenFile(hwnd, true, true);
+            topoSettings.hWnd = hwnd;
+            topoSettings.addNetwork = true;
+            OnOpenFile(topoSettings);
         }
-        else if (LOWORD(wParam) == ID_FILE_OPENCAMERAFORRENDER)
+        else if (LOWORD(wParam) == ID_CAMERA_RENDER)
         {
-            OnOpenCamera(hwnd, true, false);
+            topoSettings.hWnd = hwnd;
+            topoSettings.addNetwork = false;
+            OnOpenCamera(topoSettings);
         }
-        else if (LOWORD(wParam) == ID_FILE_OPENCAMERAFORNETWORKANDSTREAMING)
+        else if (LOWORD(wParam) == ID_CAMERA_STREAMING)
         {
-            OnOpenCamera(hwnd, false, true);
+            topoSettings.hWnd = NULL;
+            topoSettings.addNetwork = true;
+            OnOpenCamera(topoSettings);
         }
-        else if (LOWORD(wParam) == ID_FILE_OPENCAMERAFORNETWORKANDRENDER)
+        else if (LOWORD(wParam) == ID_CAMERA_STREAMING_AND_RENDER)
         {
-            OnOpenCamera(hwnd, true, true);
+            topoSettings.hWnd = hwnd;
+            topoSettings.addNetwork = true;
+            OnOpenCamera(topoSettings);
         }
-        else if (LOWORD(wParam) == ID_FILE_CONNECTTOREMOTECAMERA)
+        else if (LOWORD(wParam) == ID_CAMERA_CONNECT_ST)
         {
-            OnOpenRemoteCamera(hwnd);
+            topoSettings.connectToRemoteCamera = true;
+            topoSettings.addSampleTransform = true;
+            topoSettings.hWnd = hwnd;
+            OnOpenRemoteCamera(topoSettings);
+        }
+        else if (LOWORD(wParam) == ID_CAMERA_CONNECT)
+        {
+            topoSettings.connectToRemoteCamera = true;
+            topoSettings.hWnd = hwnd;
+            OnOpenRemoteCamera(topoSettings);
         }
         else if (LOWORD(wParam) == ID_SEEK_SEEKTOBEGIN)
         {
@@ -307,7 +327,7 @@ void OnTimer(void)
 
 
 
-void OnOpenFile(HWND parent, bool render, bool network)
+void OnOpenFile(TopologySettings topoSettings)
 {
     OPENFILENAME ofn;       // common dialog box structure
     WCHAR  szFile[260];       // buffer for file name
@@ -315,7 +335,7 @@ void OnOpenFile(HWND parent, bool render, bool network)
     // Initialize OPENFILENAME
     ZeroMemory(&ofn, sizeof(ofn));
     ofn.lStructSize = sizeof(ofn);
-    ofn.hwndOwner = parent;
+    ofn.hwndOwner = topoSettings.hWnd;
     ofn.lpstrFile = szFile;
     // Set lpstrFile[0] to '\0' so that GetOpenFileName does not 
     // use the contents of szFile to initialize itself.
@@ -334,39 +354,26 @@ void OnOpenFile(HWND parent, bool render, bool network)
         // call the player to actually open the file and build the topology
         if(g_pPlayer != NULL)
         {
-            if(render)
-            {
-                g_pPlayer->OpenURL(ofn.lpstrFile, parent, network);
-            }
-            else
-            {
-                g_pPlayer->OpenURL(ofn.lpstrFile, NULL, network);
-            }
+
+                g_pPlayer->OpenURL(ofn.lpstrFile, topoSettings);
         }
     }
 }
 
-void OnOpenCamera(HWND parent, bool render, bool network)
+void OnOpenCamera(TopologySettings topoSettings)
 {
     // call the player to actually open the camera and build the topology
     if (g_pPlayer != NULL)
     {
-        if (render)
-        {
-            g_pPlayer->OpenLocalCamera(parent, network);
-        }
-        else
-        {
-            g_pPlayer->OpenLocalCamera(NULL, network);
-        }
+        g_pPlayer->OpenLocalCamera(topoSettings);
     }
 }
 
-void OnOpenRemoteCamera(HWND parent)
+void OnOpenRemoteCamera(TopologySettings topoSettings)
 {
     // call the player to actually open the camera and build the topology
     if (g_pPlayer != NULL)
     {
-        g_pPlayer->OpenURL(L"http://localhost:8080", parent, false);
+        g_pPlayer->OpenURL(L"http://localhost:8080", topoSettings);
     }
 }
