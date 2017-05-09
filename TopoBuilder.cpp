@@ -16,6 +16,30 @@ IMFTransform* CreateColorConverterMFT()
     return pColorConverterMFT;
 }
 
+IMFTransform* CreateEncoderMft(IMFMediaType * inputMediaType, GUID outMajorType, GUID outSubType)
+{
+    CComPtr<IMFTransform> pEncoder = FindEncoderTransform(outMajorType, outSubType);
+    HRESULT hr = S_OK;
+
+    GUID major = GetMajorType(inputMediaType);
+    CComPtr<IMFMediaType> outputType = CreateMediaType(outMajorType, outSubType);
+    hr = CopyVideoType(inputMediaType, outputType);
+    THROW_ON_FAIL(hr);
+
+    hr = pEncoder->SetOutputType(0, outputType.Detach(), 0);
+    THROW_ON_FAIL(hr);
+
+    hr = pEncoder->SetInputType(0, inputMediaType, 0);
+    THROW_ON_FAIL(hr);
+
+    DWORD mftStatus = 0;
+    pEncoder->GetInputStatus(0, &mftStatus);
+    if (MFT_INPUT_STATUS_ACCEPT_DATA != mftStatus) {
+        THROW_ON_FAIL(S_FALSE);
+    }
+    return pEncoder.Detach();
+}
+
 //
 // Initiates topology building from the file URL by first creating a media source, and then
 // adding source and sink nodes for every stream found in the file.
@@ -610,7 +634,7 @@ HRESULT CTopoBuilder::CreateOutputNode(
         {
             CComPtr<IMFTopologyNode> pOldOutput = pOutputNode;
             pOutputNode = NULL;
-            hr = CreateTeeNetworkTwig(pStreamDescriptor, pOldOutput, &pOutputNode);
+            hr = CreateTeeNetworkTwig(pCurrentMediaType, pOldOutput, &pOutputNode);
             BREAK_ON_FAIL(hr);
         }
         *ppOutputNode = pOutputNode.Detach();
@@ -653,7 +677,7 @@ HRESULT CTopoBuilder::AddSampleTransform(IMFMediaType* mediaType, IMFTopologyNod
 // If there is a network sink, create a Tee node and hook the network sink in parallel to
 // the renderer sink in the topology, then return the Tee node.
 //
-HRESULT CTopoBuilder::CreateTeeNetworkTwig(IMFStreamDescriptor* pStreamDescriptor, 
+HRESULT CTopoBuilder::CreateTeeNetworkTwig(IMFMediaType* pSourceMediaType, 
     IMFTopologyNode* pRendererNode, IMFTopologyNode** ppTeeNode)
 {
     HRESULT hr = S_OK;
@@ -669,10 +693,8 @@ HRESULT CTopoBuilder::CreateTeeNetworkTwig(IMFStreamDescriptor* pStreamDescripto
         if(m_pNetworkSinkActivate == NULL)
             break;
 
-        // get the stream ID
-        hr = pStreamDescriptor->GetStreamIdentifier(&streamId);
-
         // TODO: Check how to avoid this
+        //hr = pStreamDescriptor->GetStreamIdentifier(&streamId);
         streamId = 1;
         BREAK_ON_FAIL(hr);
 
@@ -688,17 +710,40 @@ HRESULT CTopoBuilder::CreateTeeNetworkTwig(IMFStreamDescriptor* pStreamDescripto
         hr = pNetworkOutputNode->SetObject(m_pNetworkSinkActivate);
         BREAK_ON_FAIL(hr);
 
-        // add the network output topology node to the topology
-        m_pTopology->AddNode(pNetworkOutputNode);
-        BREAK_ON_FAIL(hr);
-        
-        
+        CComPtr<IMFTopologyNode> pOutputNode = pNetworkOutputNode;
+
+        if (m_topoSettings.addH264Encoder)
+        {
+            CComPtr<IMFTransform> transform;
+
+            transform = CreateEncoderMft(pSourceMediaType, MFMediaType_Video, MEDIASUBTYPE_H264);
+
+            CComPtr<IMFTopologyNode> transformNode;
+            
+            CComPtr<IMFTopologyNode> pOldOutput = pOutputNode;
+            pOutputNode = NULL;
+
+            hr = AddOldOutputToTopo(m_pTopology, transform, pOldOutput, &transformNode);
+
+            CComPtr<IMFTransform> color = CreateColorConverterMFT();
+            CComPtr<IMFTopologyNode> colorConverterNode;
+
+            AddOldOutputToTopo(m_pTopology, color, transformNode, &colorConverterNode);
+            pOutputNode = colorConverterNode.Detach();
+        }
+        else
+        {
+            // add the network output topology node to the topology
+            m_pTopology->AddNode(pNetworkOutputNode);
+            BREAK_ON_FAIL(hr);
+        }
+
         // create the topology Tee node
         hr = MFCreateTopologyNode(MF_TOPOLOGY_TEE_NODE, &pTeeNode);
         BREAK_ON_FAIL(hr);
 
         // connect the first Tee node output to the network sink node
-        hr = pTeeNode->ConnectOutput(0, pNetworkOutputNode, 0);
+        hr = pTeeNode->ConnectOutput(0, pOutputNode, 0);
         BREAK_ON_FAIL(hr);
 
         // if a renderer node was created and passed in, add it to the topology

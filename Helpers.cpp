@@ -136,7 +136,8 @@ IMFTransform* FindEncoderTransform(GUID major, GUID minor) {
     HRESULT hr;
     IMFTransform *pEncoder;
     // Create the first encoder in the list.
-    THROW_ON_FAIL(ppActivate[0]->ActivateObject(__uuidof(IMFTransform), (void**)&pEncoder));
+    hr = ppActivate[0]->ActivateObject(__uuidof(IMFTransform), (void**)&pEncoder);
+    THROW_ON_FAIL(hr);
 
     CoTaskMemFree(ppActivate);
     return pEncoder;

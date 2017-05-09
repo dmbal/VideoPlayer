@@ -140,6 +140,13 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
             topoSettings.addNetwork = true;
             OnOpenCamera(topoSettings);
         }
+        else if (LOWORD(wParam) == ID_CAMERA_STREAMING_AND_RENDER_USINGH264)
+        {
+            topoSettings.hWnd = hwnd;
+            topoSettings.addNetwork = true;
+            topoSettings.addH264Encoder = true;
+            OnOpenCamera(topoSettings);
+        }
         else if (LOWORD(wParam) == ID_CAMERA_CONNECT_ST)
         {
             topoSettings.connectToRemoteCamera = true;
