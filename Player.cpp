@@ -581,7 +581,11 @@ HRESULT CPlayer::CreateSession(void)
         assert(m_state == PlayerState_Closed);
 
         // Create the media session.
-        hr = MFCreateMediaSession(NULL, &m_pSession);
+        CComPtr<IMFAttributes> config;
+        MFCreateAttributes(&config, 1);
+        hr = config->SetUINT32(MF_LOW_LATENCY, 0);
+        BREAK_ON_FAIL(hr);
+        hr = MFCreateMediaSession(config, &m_pSession);
         BREAK_ON_FAIL(hr);
 
         m_state = PlayerState_Ready;
