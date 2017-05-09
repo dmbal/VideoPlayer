@@ -29,9 +29,6 @@ IMFTransform* CreateEncoderMft(IMFMediaType * inputMediaType, GUID outMajorType,
     hr = pEncoder->SetOutputType(0, outputType.Detach(), 0);
     THROW_ON_FAIL(hr);
 
-    hr = pEncoder->SetInputType(0, inputMediaType, 0);
-    THROW_ON_FAIL(hr);
-
     DWORD mftStatus = 0;
     pEncoder->GetInputStatus(0, &mftStatus);
     if (MFT_INPUT_STATUS_ACCEPT_DATA != mftStatus) {
